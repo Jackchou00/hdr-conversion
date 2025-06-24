@@ -263,13 +263,16 @@ def read_uhdr(file_path, SDR_luminance=203.0):
 
         # Scale HDR image to SDR luminance
         xyz_image = colour.RGB_to_XYZ(hdr_image, colourspace="Display P3")
-        xyz_image = xyz_image * SDR_luminance
+        xyz_image = xyz_image * SDR_luminance / 10000
 
-        return xyz_image
+        # Convert from XYZ to Rec.2020 RGB
+        rec2020_image = colour.XYZ_to_RGB(xyz_image, colourspace="ITU-R BT.2020")
+
+        return rec2020_image
 
 
 if __name__ == "__main__":
-    file_name = "C:\\Users\\Jackc\\Desktop\\IMG20250623142451.jpg"
+    file_name = "Burger.jpg"
     output_directory = "extracted_ultrahdr"
 
     ultrahdr_data = extract_ultrahdr_data(

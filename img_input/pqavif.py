@@ -38,12 +38,8 @@ def colour_convertion(pq_array):
     # Convert PQ to linear RGB (absolute colorimetry)
     hdr_linear_rgb_image = colour.models.eotf_BT2100_PQ(pq_array)
 
-    # Convert linear RGB to XYZ
-    xyz_image = colour.RGB_to_XYZ(
-        hdr_linear_rgb_image,
-        colourspace="ITU-R BT.2020",
-    )
-    return xyz_image
+    norm_linear_rgb_image = hdr_linear_rgb_image / 10000
+    return norm_linear_rgb_image
 
 
 def read_pq_avif(avif_file_path):
