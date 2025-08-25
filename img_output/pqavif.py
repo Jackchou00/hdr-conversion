@@ -2,6 +2,12 @@ import pillow_heif
 import numpy as np
 from PIL import Image
 
+"""
+Note: pillow_heif no longer supports AVIF after version 0.22.0 since pillow already supports AVIF natively.
+
+Need to transfer the AVIF saving functionality to use pillow's native support for AVIF.
+"""
+
 
 # Save HDR image
 pillow_heif.options.QUALITY = -1
