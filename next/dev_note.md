@@ -61,7 +61,7 @@
 -    实现 `ISO21496Handler` (`iso21496.py`):
     -   逻辑上可能与 `UltraHDRHandler` 非常相似，但遵循 ISO 标准。
 
--    实现 `SingleLayerPQHandler` （例如 HEIC/AVIF) (`heic_pq.py`):
+-    实现 `SingleLayerPQHandler` （例如 HEIC/AVIF） (`heic_pq.py`):
     -   处理基于 HEVC/AV1 编码的单层 PQ 图像。
 
 -    ... （未来可扩展其他格式）
