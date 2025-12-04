@@ -14,7 +14,7 @@ from .img_output.pqavif import save_np_array_to_avif
 
 __all__ = [
     "apply_gain_map",
-    "read_base_and_gain_map", 
+    "read_base_and_gain_map",
     "get_headroom",
     "save_np_array_to_avif"
 ]
