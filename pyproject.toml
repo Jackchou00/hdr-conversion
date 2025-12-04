@@ -14,3 +14,7 @@ dependencies = [
     "pillow-heif==0.22.0",
     "pyexiftool>=0.5.6",
 ]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
