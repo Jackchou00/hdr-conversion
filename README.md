@@ -4,6 +4,8 @@
 
 High Dynamic Range (HDR) image format has gained significant traction in modern photography. This repository offers a Python-based solution for converting between various HDR formats, including UltraHDR, Gainmap (ISO 21496-1), and pure PQ/HLG formats (ISO 22028-5).
 
+Note: This project is for research and learning purposes and is not intended to provide industry-grade robustness or production readiness.
+
 ## Architecture Overview
 
 The core conversion methodology involves transforming images into a linear light color space as an intermediate representation, followed by conversion to the desired target format.

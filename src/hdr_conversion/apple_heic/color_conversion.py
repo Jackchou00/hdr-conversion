@@ -6,7 +6,6 @@ Reference: https://developer.apple.com/documentation/appkit/applying-apple-hdr-e
 
 from PIL import Image
 import numpy as np
-# import colour
 
 
 def eotf_display_p3(image: np.ndarray) -> np.ndarray:
