@@ -26,5 +26,5 @@ The core conversion methodology involves transforming images into a linear light
 
 - Implement comprehensive HDR format identification system
 - Enhance Gainmap reader implementation beyond current `FF D9 FF D8` pattern matching
-- Migrate from `pillow_heif` to standard `pillow` library for AVIF support
+- Migrate from `pillow_heif` to standard `imagecodecs` library for AVIF support
 - Integrate Apple HEIC format into current input/output operations

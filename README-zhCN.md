@@ -26,5 +26,5 @@
 
 - 开发完整的 HDR 格式识别系统
 - 改进 Gainmap 读取器，替代当前简易的 `FF D9 FF D8` 模式匹配方案
-- 从 `pillow_heif` 迁移至标准 `pillow` 库以实现 AVIF 支持
+- 从 `pillow_heif` 迁移至 `imagecodecs` 库以实现 AVIF 支持
 - 将 Apple HEIC 格式集成到现有的输入输出方式中。
