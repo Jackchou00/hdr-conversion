@@ -3,9 +3,9 @@ import rich
 import numpy as np
 import colour
 
-from hdr_conversion.iso21496.io import decode_iso21496, encode_iso21496
-from hdr_conversion.iso21496.calculate import to_alternate
-from hdr_conversion.iso22028.io import encode_iso22028_2020_pq
+from hdrconv.iso21496.io import decode_iso21496, encode_iso21496
+from hdrconv.iso21496.calculate import to_alternate
+from hdrconv.iso22028.io import encode_iso22028_2020_pq
 
 iso21496_example_image_path = "images/iso21496.jpg"
 iso21496_image_obj = decode_iso21496(iso21496_example_image_path)

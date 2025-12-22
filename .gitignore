@@ -209,3 +209,6 @@ __marimo__/
 
 # Test Images
 images/
+
+# VSCODE settings
+.vscode/

@@ -1,4 +1,4 @@
-from hdr_conversion import save_np_array_to_avif, apply_gain_map, read_base_and_gain_map, get_headroom
+from hdrconv import save_np_array_to_avif, apply_gain_map, read_base_and_gain_map, get_headroom
 import colour
 
 

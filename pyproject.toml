@@ -21,5 +21,9 @@ build-backend = "hatchling.build"
 
 [dependency-groups]
 dev = [
+    "pytest>=9.0.2",
     "rich>=14.2.0",
 ]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/hdrconv"]
