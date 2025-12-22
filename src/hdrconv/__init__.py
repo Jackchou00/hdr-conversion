@@ -26,7 +26,7 @@ Example:
     >>> io.write_22028_pq({'data': pq_encoded, ...}, "output.avif")
 """
 
-__version__ = "0.1.0"
+__version__ = "0.1.0a1"
 
 # Import submodules for convenience
 from . import convert
