@@ -1,30 +1,39 @@
 # HDR Format Conversion Tool
 
-## Introduction
+## Project Overview
 
-High Dynamic Range (HDR) image format has gained significant traction in modern photography. This repository offers a Python-based solution for converting between various HDR formats, including UltraHDR, Gainmap (ISO 21496-1), and pure PQ/HLG formats (ISO 22028-5).
+This project provides Python-based research on HDR format parsing and writing, supporting parsing, writing, and conversion of multiple formats including UltraHDR, Adaptive Gainmap (ISO 21496-1), and pure PQ/HLG formats (ISO 22028-5).
 
-Note: This project is for research and learning purposes and is not intended to provide industry-grade robustness or production readiness.
+Note: This project is for research and learning purposes only and does not aim for production readiness.
 
-## Architecture Overview
+## Features
 
-The core conversion methodology involves transforming images into a linear light color space as an intermediate representation, followed by conversion to the desired target format.
+### Parsing
 
-## References
+For UltraHDR and Adaptive Gainmap formats, supports structured extraction of:
 
-- [UltraHDR](https://developer.android.com/media/platform/hdr-image-format): Version 1.1 as of April 2025
+- Main image data
+- Gainmap image data
+- Gainmap metadata
+
+For pure PQ/HLG formats, supports extraction of image data and related metadata.
+
+### Writing
+
+Writes image data and structured metadata into corresponding formats.
+
+UltraHDR and Adaptive Gainmap formats are implemented through manual byte stream editing combined with existing library JPEG encoding capabilities, while pure PQ/HLG formats are implemented through existing libraries.
+
+### Conversion
+
+Calculates alternate images based on metadata to enable conversion between Gainmap and pure HDR formats.
+
+## Reference Standards
+
+- [UltraHDR](https://developer.android.com/media/platform/hdr-image-format): Version 1.1 released in April 2025
 - [ISO 21496-1](https://www.iso.org/standard/86775.html)
 - [ISO 22028-5](https://www.iso.org/standard/81863.html)
 
-## Dependencies
+## License
 
-- `colour-science`: Handles transfer functions and color space conversions
-- `libultrahdr`: Provides UltraHDR format support (metadata reading and full writing capabilities)
-- `pillow-heif`: Enables AVIF format input/output operations
-
-## Roadmap
-
-- Implement comprehensive HDR format identification system
-- Enhance Gainmap reader implementation beyond current `FF D9 FF D8` pattern matching
-- Migrate from `pillow_heif` to standard `imagecodecs` library for AVIF support
-- Integrate Apple HEIC format into current input/output operations
+MIT. Please refer to the respective LICENSE files for specific format and dependency details.

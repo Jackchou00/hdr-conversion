@@ -1,13 +1,6 @@
-"""
-Optimized ISO 21496-1 utility.
-
-Features:
-- Decodes ISO 21496-1 Gainmap JPEG containers.
-- Encodes ISO 21496-1 Image Objects into JPEG containers.
-- Strict adherence to the requested metadata structure.
-"""
-
 from __future__ import annotations
+from hdrconv.core import GainmapImage
+
 
 import io
 import struct
@@ -707,3 +700,50 @@ def encode_iso21496(image: ISO21496Image, output_path: str) -> bool:
     except Exception as e:
         print(f"Encoding failed: {e}")
         return False
+
+
+def read_21496(filepath: str) -> GainmapImage:
+    """
+    Read ISO 21496-1 Gainmap JPEG file.
+
+    Args:
+        filepath: Path to the ISO 21496-1 JPEG file
+
+    Returns:
+        GainmapImage dict containing:
+        - baseline: uint8 array (H, W, 3), range [0, 255]
+        - gainmap: uint8 array (H, W, 3) or (H, W, 1), range [0, 255]
+        - metadata: ISO21496GainmapMetadata dict
+        - baseline_icc: Optional ICC profile bytes
+        - gainmap_icc: Optional ICC profile bytes
+    """
+    iso_obj = decode_iso21496(filepath)
+
+    return GainmapImage(
+        baseline=iso_obj.baseline_image,
+        gainmap=iso_obj.gainmap_image,
+        metadata=iso_obj.gainmap_metadata,
+        baseline_icc=iso_obj.baseline_icc_profile,
+        gainmap_icc=iso_obj.gainmap_icc_profile,
+    )
+
+
+def write_21496(data: GainmapImage, filepath: str) -> None:
+    """
+    Write ISO 21496-1 Gainmap JPEG file.
+
+    Args:
+        data: GainmapImage dict with baseline, gainmap, and metadata
+        filepath: Output path for the JPEG file
+    """
+    iso_obj = ISO21496Image(
+        baseline_image=data["baseline"],
+        gainmap_image=data["gainmap"],
+        gainmap_metadata=data["metadata"],
+        baseline_icc_profile=data.get("baseline_icc"),
+        gainmap_icc_profile=data.get("gainmap_icc"),
+    )
+
+    success = encode_iso21496(iso_obj, filepath)
+    if not success:
+        raise RuntimeError(f"Failed to write ISO 21496-1 file: {filepath}")

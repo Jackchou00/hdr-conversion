@@ -1,3 +1,13 @@
+import pillow_heif
+import numpy as np
+from PIL import Image
+from typing import Tuple, Optional
+from pathlib import Path
+from exiftool import ExifToolHelper
+
+from hdrconv.core import AppleHeicData
+
+
 """
 Extracts main image and gainmap from HEIC files shot by iPhone.
 
@@ -6,10 +16,6 @@ Modified from: https://github.com/finnschi/heic-shenanigans/blob/main/gain_map_e
 iPhone's Gainmap is an auxiliary image with 1/4 the resolution of the main image and a single channel.
 """
 
-import pillow_heif
-import numpy as np
-from PIL import Image
-from typing import Tuple, Optional
 
 # According to Apple documentation, the URN for the HDR gain map auxiliary image is fixed.
 HDR_GAIN_MAP_URN = "urn:com:apple:photo:2020:aux:hdrgainmap"
@@ -78,26 +84,70 @@ def read_base_and_gain_map(input_path: str) -> Tuple[np.ndarray, Optional[np.nda
     return base_image_np, gain_map_np
 
 
-# --- Usage Example ---
-if __name__ == "__main__":
-    file_path = "apple_heic/IMG_6850.HEIC"  # your HEIC file path
+"""
+Apple uses headroom, instead of GainMap Min and Max.
 
-    base_image, gain_map = read_base_and_gain_map(file_path)
+Reference: https://developer.apple.com/documentation/appkit/applying-apple-hdr-effect-to-your-photos
 
-    if base_image is not None:
-        print("\nBase Image:")
-        print(f"  - Type: {type(base_image)}")
-        print(f"  - Shape: {base_image.shape}")
-        print(f"  - Dtype: {base_image.dtype}")
+e.g. hdr_rgb = sdr_rgb * (1.0 + (headroom - 1.0) * gainmap)
 
-        np.save("base_image.npy", base_image)
+rgb and gainmap here all in linear space, gainmap defaultly use a Rec.709 transfer function.
 
-    if gain_map is not None:
-        print("\nGain Map:")
-        print(f"  - Type: {type(gain_map)}")
-        print(f"  - Shape: {gain_map.shape}")
-        print(f"  - Dtype: {gain_map.dtype}")
+Code below shows how to extract the "headroom" from a file's EXIF part.
 
-        np.save("gain_map.npy", gain_map)
+Original code: https://github.com/johncf/apple-hdr-heic/blob/master/src/apple_hdr_heic/metadata.py
+"""
+
+
+def get_headroom(file_path: str | Path, use_makernote: bool = False) -> float:
+    target_tags = [
+        "XMP:HDRGainMapHeadroom",
+        "MakerNotes:HDRHeadroom",  #  maker33
+        "MakerNotes:HDRGain",  #  maker48
+    ]
+
+    with ExifToolHelper() as et:
+        metadata = et.get_tags(file_path, tags=target_tags)[0]
+
+    if "XMP:HDRGainMapHeadroom" in metadata and not use_makernote:
+        return float(metadata["XMP:HDRGainMapHeadroom"])
+
+    maker33 = metadata.get("MakerNotes:HDRHeadroom")
+    maker48 = metadata.get("MakerNotes:HDRGain")
+
+    if maker33 < 1.0:
+        if maker48 <= 0.01:
+            stops = -20.0 * maker48 + 1.8
+        else:
+            stops = -0.101 * maker48 + 1.601
     else:
-        print("\nHDR gain map not found in this file.")
+        if maker48 <= 0.01:
+            stops = -70.0 * maker48 + 3.0
+        else:
+            stops = -0.303 * maker48 + 2.303
+
+    headroom = 2.0 ** max(stops, 0.0)
+    return headroom
+
+
+def read_apple_heic(filepath: str) -> AppleHeicData:
+    """
+    Read Apple HEIC HDR file.
+
+    Args:
+        filepath: Path to the Apple HEIC file
+
+    Returns:
+        AppleHeicData dict containing:
+        - base: uint8 array (H, W, 3), Display P3, range [0, 255]
+        - gainmap: uint8 array (H, W, 1), single channel, range [0, 255]
+        - headroom: float, gain headroom value
+    """
+
+    base, gainmap = read_base_and_gain_map(filepath)
+    headroom = get_headroom(filepath)
+
+    if base is None or gainmap is None or headroom is None:
+        raise ValueError(f"Failed to read Apple HEIC data from {filepath}")
+
+    return AppleHeicData(base=base, gainmap=gainmap, headroom=headroom)
