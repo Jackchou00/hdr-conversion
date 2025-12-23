@@ -27,27 +27,12 @@ def has_gain_map(input_path: str) -> bool:
         bool: True if auxiliary images are found, False otherwise.
     """
     has_gain_map = False
-    try:
-        heif_file = pillow_heif.read_heif(input_path, convert_hdr_to_8bit=False)
-    except Exception as e:
-        print(f"Error: Unable to read HEIC file '{input_path}': {e}")
-        return False
+    heif_file = pillow_heif.read_heif(input_path, convert_hdr_to_8bit=False)
 
     if "aux" in heif_file.info:
         aux_info = heif_file.info["aux"]
-        print("Auxiliary image IDs found:")
         for urn, ids in aux_info.items():
-            print(f"  URN: {urn}, IDs: {ids}")
+            # print(f"  URN: {urn}, IDs: {ids}")
             if urn == HDR_GAIN_MAP_URN:
                 has_gain_map = True
     return has_gain_map
-
-
-# --- Usage Example ---
-if __name__ == "__main__":
-    file_path = "apple_heic/IMG_0015.HEIC"  # your HEIC file path
-
-    if has_gain_map(file_path):
-        print("Auxiliary images are present in the HEIC file.")
-    else:
-        print("No auxiliary images in the HEIC file.")

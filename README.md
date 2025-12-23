@@ -1,10 +1,34 @@
 # HDR Format Conversion Tool
 
+[简体中文](README-zhCN.md) | [English](README.md)
+
+> Note: In alpha stage, API may change frequently. Currently, color conversion may be incorrect.
+
 ## Project Overview
 
 This project provides Python-based research on HDR format parsing and writing, supporting parsing, writing, and conversion of multiple formats including UltraHDR, Adaptive Gainmap (ISO 21496-1), and pure PQ/HLG formats (ISO 22028-5).
 
 Note: This project is for research and learning purposes only and does not aim for production readiness.
+
+## Getting Started
+
+To install, using `uv` (recommended):
+
+```bash
+uv add hdr-conversion
+```
+
+or use `pip`:
+
+```bash
+pip install hdr-conversion
+```
+
+The package can be imported as follows:
+
+```python
+import hdrconv
+```
 
 ## Features
 

@@ -1,6 +1,6 @@
 [project]
 name = "hdr-conversion"
-version = "0.1.0a1"
+version = "0.1.0a2"
 description = "tools for converting HDR images between different formats"
 readme = "README.md"
 requires-python = ">=3.13"

@@ -11,7 +11,7 @@ import hdrconv.convert as convert
 
 # Step 1: Read ISO 21496-1 Gainmap JPEG
 print("Reading ISO 21496-1 file...")
-gainmap_data = io.read_21496("images/iso21496.jpg")
+gainmap_data = io.read_21496("images/iso21496_p3.jpg")
 
 print(f"  Baseline shape: {gainmap_data['baseline'].shape}")
 print(f"  Gainmap shape: {gainmap_data['gainmap'].shape}")
