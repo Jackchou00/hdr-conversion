@@ -11,7 +11,12 @@ from PIL import Image
 from hdrconv.core import GainmapImage, HDRImage, AppleHeicData, GainmapMetadata
 
 
-def gainmap_to_hdr(data: GainmapImage, target_color_space: str = "bt2020") -> HDRImage:
+def gainmap_to_hdr(
+    data: GainmapImage,
+    baseline_color_space: str = "p3",
+    alt_color_space: str = "p3",
+    target_color_space: str = "bt2020",
+) -> HDRImage:
     """
     Convert Gainmap image to linear HDR using ISO 21496-1 formula.
 
@@ -24,6 +29,8 @@ def gainmap_to_hdr(data: GainmapImage, target_color_space: str = "bt2020") -> HD
 
     Args:
         data: GainmapImage dict with baseline, gainmap, and metadata
+        baseline_color_space: Color space of baseline image ('bt709', 'p3', 'bt2020')
+        alt_color_space: Color space of gainmap image ('bt709', 'p3', 'bt2020')
         target_color_space: Target color space ('bt709', 'p3', 'bt2020')
 
     Returns:
@@ -39,6 +46,20 @@ def gainmap_to_hdr(data: GainmapImage, target_color_space: str = "bt2020") -> HD
     baseline = colour.eotf(baseline, function="sRGB")
     gainmap = data["gainmap"].astype(np.float32) / 255.0
     metadata = data["metadata"]
+
+    use_base_colour_space = metadata["use_base_colour_space"]
+    if not use_base_colour_space:
+        baseline = convert_color_space(
+            baseline,
+            source_space=baseline_color_space,
+            target_space=alt_color_space,
+        )
+    else:
+        gainmap = convert_color_space(
+            gainmap,
+            source_space=alt_color_space,
+            target_space=baseline_color_space,
+        )
 
     # Resize gainmap to match baseline if needed
     h, w = baseline.shape[:2]
@@ -73,9 +94,16 @@ def gainmap_to_hdr(data: GainmapImage, target_color_space: str = "bt2020") -> HD
     hdr_linear = gainmap_linear * (baseline + baseline_offset) - alternate_offset
 
     # Color space conversion
-    hdr_linear = convert_color_space(
-        hdr_linear, source_space="p3", target_space=target_color_space
-    )
+    if not use_base_colour_space:
+        hdr_linear = convert_color_space(
+            hdr_linear, source_space=alt_color_space, target_space=target_color_space
+        )
+    else:
+        hdr_linear = convert_color_space(
+            hdr_linear,
+            source_space=baseline_color_space,
+            target_space=target_color_space,
+        )
 
     # clip negative values
     hdr_linear = np.clip(hdr_linear, 0.0, None)
@@ -91,6 +119,8 @@ def gainmap_to_hdr(data: GainmapImage, target_color_space: str = "bt2020") -> HD
 def hdr_to_gainmap(
     hdr: HDRImage,
     baseline: Optional[np.ndarray] = None,
+    color_space: str = "bt709",
+    icc_profile: Optional[bytes] = None,
     gamma: float = 1.0,
 ) -> GainmapImage:
     """
@@ -102,7 +132,8 @@ def hdr_to_gainmap(
     Args:
         hdr: HDRImage dict with linear HDR data
         baseline: Optional pre-computed baseline (SDR) image, uint8 (H, W, 3)
-        target_headroom: Target HDR headroom in stops (log2)
+        color_space: Color space for both baseline and gainmap ('bt709', 'p3', 'bt2020')
+        icc_profile: Optional ICC profile bytes to embed (should be same as color space)
         gamma: Gainmap gamma parameter
 
     Returns:
@@ -112,7 +143,7 @@ def hdr_to_gainmap(
 
     # convert to p3 colour space
     hdr_data = convert_color_space(
-        hdr_data, source_space=hdr["color_space"], target_space="bt709"
+        hdr_data, source_space=hdr["color_space"], target_space=color_space
     )
 
     # Ensure HDR data is non-negative to avoid NaN in log2
@@ -179,8 +210,8 @@ def hdr_to_gainmap(
         baseline=baseline_uint8,
         gainmap=gainmap_uint8,
         metadata=metadata,
-        baseline_icc=None,
-        gainmap_icc=None,
+        baseline_icc=icc_profile,
+        gainmap_icc=icc_profile,
     )
 
 

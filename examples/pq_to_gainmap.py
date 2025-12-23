@@ -28,10 +28,17 @@ hdr = {
 print(f"  Linear range: [{linear_hdr.min():.4f}, {linear_hdr.max():.4f}]")
 
 # Step 3: Convert HDR to Gainmap format
+
+# read a display p3 icc profile
+with open("baseline.icc", "rb") as f:
+    p3_icc = f.read()
+
 print("\nGenerating Gainmap...")
 gainmap_data = convert.hdr_to_gainmap(
     hdr,
     baseline=None,  # Auto-generate SDR baseline
+    color_space="p3",
+    icc_profile=p3_icc,
     gamma=1.0,
 )
 

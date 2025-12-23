@@ -11,15 +11,25 @@ import hdrconv.convert as convert
 
 # Step 1: Read ISO 21496-1 Gainmap JPEG
 print("Reading ISO 21496-1 file...")
-gainmap_data = io.read_21496("images/iso21496_p3.jpg")
+gainmap_data = io.read_21496("images/iso21496.jpg")
 
 print(f"  Baseline shape: {gainmap_data['baseline'].shape}")
 print(f"  Gainmap shape: {gainmap_data['gainmap'].shape}")
 print(f"  Metadata: {gainmap_data['metadata']}")
 
+# save icc profiles for reference
+if gainmap_data["baseline_icc"] is not None:
+    with open("baseline.icc", "wb") as f:
+        f.write(gainmap_data["baseline_icc"])
+
 # Step 2: Convert Gainmap to linear HDR
 print("\nConverting Gainmap to linear HDR...")
-hdr = convert.gainmap_to_hdr(gainmap_data, target_color_space="bt2020")
+hdr = convert.gainmap_to_hdr(
+    gainmap_data,
+    baseline_color_space="p3",
+    alt_color_space="bt2020",
+    target_color_space="bt2020",
+)
 
 print(f"  HDR shape: {hdr['data'].shape}")
 print(f"  HDR dtype: {hdr['data'].dtype}")
