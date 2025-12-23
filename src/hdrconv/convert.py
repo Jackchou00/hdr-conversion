@@ -36,7 +36,7 @@ def gainmap_to_hdr(data: GainmapImage, target_color_space: str = "bt2020") -> HD
     """
     baseline = data["baseline"].astype(np.float32) / 255.0  # Normalize to [0, 1]
     # linear baseline
-    baseline = colour.eotf(baseline)
+    baseline = colour.eotf(baseline, function="sRGB")
     gainmap = data["gainmap"].astype(np.float32) / 255.0
     metadata = data["metadata"]
 
@@ -112,8 +112,11 @@ def hdr_to_gainmap(
 
     # convert to p3 colour space
     hdr_data = convert_color_space(
-        hdr_data, source_space=hdr["color_space"], target_space="bt709", clip=True
+        hdr_data, source_space=hdr["color_space"], target_space="bt709"
     )
+
+    # Ensure HDR data is non-negative to avoid NaN in log2
+    hdr_data = np.clip(hdr_data, 0.0, None)
 
     # Generate baseline if not provided
     if baseline is None:
@@ -125,9 +128,14 @@ def hdr_to_gainmap(
     alt_headroom = np.log2(hdr_data.max() + 1e-6)
 
     # Compute gainmap from ratio
+    # preset offset for both baseline and alternate = 1/64
+    alt_offset = float(1 / 64)
+    base_offset = float(1 / 64)
     # Avoid division by zero
-    epsilon = 1e-6
-    ratio = (hdr_data + epsilon) / (baseline + epsilon)
+    ratio = (hdr_data + alt_offset) / (baseline + base_offset)
+
+    # Ensure ratio is positive before log2 (clip to small positive value)
+    ratio = np.clip(ratio, 1e-6, None)
 
     # Convert to log2 space
     gainmap_log = np.log2(ratio)
@@ -137,9 +145,7 @@ def hdr_to_gainmap(
     gainmap_max_val = np.max(gainmap_log, axis=(0, 1))
 
     # Normalize gainmap to [0, 1]
-    gainmap_norm = (gainmap_log - gainmap_min_val) / (
-        gainmap_max_val - gainmap_min_val + epsilon
-    )
+    gainmap_norm = (gainmap_log - gainmap_min_val) / (gainmap_max_val - gainmap_min_val)
     gainmap_norm = np.clip(gainmap_norm, 0, 1)
 
     # Apply gamma encoding
@@ -147,7 +153,7 @@ def hdr_to_gainmap(
 
     # Convert to uint8
     gainmap_uint8 = (gainmap_norm * 255).astype(np.uint8)
-    baseline = colour.oetf(baseline)
+    baseline = colour.eotf_inverse(baseline, function="sRGB")
     baseline_uint8 = (baseline * 255).astype(np.uint8)
 
     # convert to tuple(float, float, float)
@@ -165,8 +171,8 @@ def hdr_to_gainmap(
         gainmap_min=gainmap_min_val,
         gainmap_max=gainmap_max_val,
         gainmap_gamma=(gamma, gamma, gamma),
-        baseline_offset=(0.0, 0.0, 0.0),
-        alternate_offset=(0.0, 0.0, 0.0),
+        baseline_offset=(base_offset, base_offset, base_offset),
+        alternate_offset=(alt_offset, alt_offset, alt_offset),
     )
 
     return GainmapImage(
