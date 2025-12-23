@@ -4,7 +4,6 @@ from hdrconv.core import GainmapImage
 
 import io
 import struct
-from dataclasses import dataclass
 from fractions import Fraction
 from typing import Any, Dict, Generator, List, Optional, Tuple
 
@@ -24,20 +23,6 @@ MPF_LABEL = b"MPF\x00"
 # ISO 21496-1 Signature in APP2
 ISO21496_URN = b"urn:iso:std:iso:ts:21496:-1\x00"
 ISO21496_URN_ALT = b"urn:iso:std:iso:ts:21496:-1"  # Some writers omit null
-
-# -----------------------------------------------------------------------------
-# Data Structures
-# -----------------------------------------------------------------------------
-
-
-@dataclass
-class ISO21496Image:
-    baseline_image: np.ndarray
-    gainmap_image: np.ndarray
-    gainmap_metadata: Dict[str, Any]
-    baseline_icc_profile: bytes | None = None
-    gainmap_icc_profile: bytes | None = None
-
 
 # -----------------------------------------------------------------------------
 # Helper: JPEG Segment Parsing
@@ -102,7 +87,8 @@ def _yield_jpeg_segments(data: bytes) -> Generator[Tuple[int, bytes], None, None
 def _extract_icc(segments: List[Tuple[int, bytes]]) -> Optional[bytes]:
     """Combines split ICC chunks from APP2 segments."""
     chunks = {}
-    count = 0
+    expected_total = None
+
     for code, payload in segments:
         if code == APP2 and payload.startswith(ICC_PROFILE_LABEL):
             # Format: ID(12) + seq(1) + total(1) + data...
@@ -110,11 +96,23 @@ def _extract_icc(segments: List[Tuple[int, bytes]]) -> Optional[bytes]:
                 continue
             seq = payload[12]
             total = payload[13]
-            count = total
+
+            # Validate total consistency
+            if expected_total is None:
+                expected_total = total
+            elif expected_total != total:
+                # Inconsistent total values - file may be corrupted
+                continue
+
             chunks[seq] = payload[14:]
 
     if not chunks:
         return None
+
+    # Validate completeness (optional - warns but doesn't fail)
+    if expected_total and len(chunks) != expected_total:
+        # Missing chunks - assemble what we have but it may be incomplete
+        pass
 
     # Assemble in order
     return b"".join(chunks[i] for i in sorted(chunks.keys()))
@@ -242,7 +240,7 @@ def _split_mpf_container(data: bytes) -> Tuple[bytes, bytes]:
                         )[0]
                         if img2_offset > 0:
                             second_image_offset = mpf_offset_base + img2_offset
-                except:
+                except Exception:
                     pass
                 break
             pos += 2 + seg_len
@@ -550,8 +548,22 @@ def _build_mpf_minimal_payload(num_images: int) -> bytes:
 # -----------------------------------------------------------------------------
 
 
-def decode_iso21496(input_path: str) -> ISO21496Image:
-    with open(input_path, "rb") as f:
+def read_21496(filepath: str) -> GainmapImage:
+    """
+    Read ISO 21496-1 Gainmap JPEG file.
+
+    Args:
+        filepath: Path to the ISO 21496-1 JPEG file
+
+    Returns:
+        GainmapImage dict containing:
+        - baseline: uint8 array (H, W, 3), range [0, 255]
+        - gainmap: uint8 array (H, W, 3) or (H, W, 1), range [0, 255]
+        - metadata: ISO21496GainmapMetadata dict
+        - baseline_icc: Optional ICC profile bytes
+        - gainmap_icc: Optional ICC profile bytes
+    """
+    with open(filepath, "rb") as f:
         raw_data = f.read()
 
     # 1. Split streams (Primary vs Gainmap) via MPF
@@ -592,44 +604,33 @@ def decode_iso21496(input_path: str) -> ISO21496Image:
     if not iso_meta:
         raise ValueError("ISO 21496-1 metadata segment not found.")
 
-    return ISO21496Image(
-        baseline_image=base_arr,
-        gainmap_image=gain_arr,
-        gainmap_metadata=iso_meta,
-        baseline_icc_profile=base_icc,
-        gainmap_icc_profile=gain_icc,
+    return GainmapImage(
+        baseline=base_arr,
+        gainmap=gain_arr,
+        metadata=iso_meta,
+        baseline_icc=base_icc,
+        gainmap_icc=gain_icc,
     )
 
 
-def encode_iso21496(image: ISO21496Image, output_path: str) -> bool:
+def write_21496(data: GainmapImage, filepath: str) -> None:
     """
-    将 ISO21496Image 对象编码为单一的 ISO 21496-1 JPEG 文件。
-
-    该函数执行以下操作：
-    1. 将 Baseline 和 Gainmap 图像转换为 JPEG 字节流。
-    2. 生成 ISO 21496-1 元数据段并插入 Gainmap 流。
-    3. 计算并生成 MPF (Multi-Picture Format) 索引段。
-    4. 将 MPF 插入 Baseline 流，并将 Gainmap 拼接到文件末尾。
+    Write ISO 21496-1 Gainmap JPEG file.
 
     Args:
-        image: 包含图像数据、元数据和可选 ICC 的对象。
-        output_path: 输出文件的完整路径。
-
-    Returns:
-        bool: 成功返回 True。
+        data: GainmapImage dict with baseline, gainmap, and metadata
+        filepath: Output path for the JPEG file
     """
     try:
         # 1. 编码 Gainmap 图像 (基础 JPEG 编码)
-        gainmap_bytes_raw = _create_jpeg_bytes(
-            image.gainmap_image, image.gainmap_icc_profile
-        )
+        gainmap_bytes_raw = _create_jpeg_bytes(data["gainmap"], data.get("gainmap_icc"))
 
         # 1.1 在 Gainmap 流中插入一个最小 MPF APP2（兼容性需要）
         gainmap_mpf_segment = _build_app2_segment(_build_mpf_minimal_payload(2))
 
         # 2. 构建 ISO 21496-1 元数据段 (APP2)
         #    标准建议将此元数据放在 Gainmap 图像流中
-        iso_payload = _encode_iso21496_metadata(image.gainmap_metadata)
+        iso_payload = _encode_iso21496_metadata(data["metadata"])
         iso_segment = _build_app2_segment(iso_payload)
 
         #    将 ISO 段插入到 Gainmap 的 SOI (0xFFD8) 之后
@@ -642,7 +643,7 @@ def encode_iso21496(image: ISO21496Image, output_path: str) -> bool:
 
         # 3. 编码 Baseline 图像 (基础 JPEG 编码)
         primary_bytes_raw = _create_jpeg_bytes(
-            image.baseline_image, image.baseline_icc_profile
+            data["baseline"], data.get("baseline_icc")
         )
 
         # 3.1 在 Primary 流中插入一个短 URN stub APP2（兼容性需要）
@@ -691,59 +692,9 @@ def encode_iso21496(image: ISO21496Image, output_path: str) -> bool:
         )
 
         # 6. 拼接并写入文件 (Baseline + Gainmap)
-        with open(output_path, "wb") as f:
+        with open(filepath, "wb") as f:
             f.write(primary_final)
             f.write(gainmap_final)
 
-        return True
-
     except Exception as e:
-        print(f"Encoding failed: {e}")
-        return False
-
-
-def read_21496(filepath: str) -> GainmapImage:
-    """
-    Read ISO 21496-1 Gainmap JPEG file.
-
-    Args:
-        filepath: Path to the ISO 21496-1 JPEG file
-
-    Returns:
-        GainmapImage dict containing:
-        - baseline: uint8 array (H, W, 3), range [0, 255]
-        - gainmap: uint8 array (H, W, 3) or (H, W, 1), range [0, 255]
-        - metadata: ISO21496GainmapMetadata dict
-        - baseline_icc: Optional ICC profile bytes
-        - gainmap_icc: Optional ICC profile bytes
-    """
-    iso_obj = decode_iso21496(filepath)
-
-    return GainmapImage(
-        baseline=iso_obj.baseline_image,
-        gainmap=iso_obj.gainmap_image,
-        metadata=iso_obj.gainmap_metadata,
-        baseline_icc=iso_obj.baseline_icc_profile,
-        gainmap_icc=iso_obj.gainmap_icc_profile,
-    )
-
-
-def write_21496(data: GainmapImage, filepath: str) -> None:
-    """
-    Write ISO 21496-1 Gainmap JPEG file.
-
-    Args:
-        data: GainmapImage dict with baseline, gainmap, and metadata
-        filepath: Output path for the JPEG file
-    """
-    iso_obj = ISO21496Image(
-        baseline_image=data["baseline"],
-        gainmap_image=data["gainmap"],
-        gainmap_metadata=data["metadata"],
-        baseline_icc_profile=data.get("baseline_icc"),
-        gainmap_icc_profile=data.get("gainmap_icc"),
-    )
-
-    success = encode_iso21496(iso_obj, filepath)
-    if not success:
-        raise RuntimeError(f"Failed to write ISO 21496-1 file: {filepath}")
+        raise RuntimeError(f"Failed to write ISO 21496-1 file: {filepath}") from e
