@@ -3,14 +3,13 @@ name = "hdr-conversion"
 version = "0.1.0a2"
 description = "tools for converting HDR images between different formats"
 readme = "README.md"
-requires-python = ">=3.13"
+requires-python = ">=3.11"
 dependencies = [
-    "colour-science>=0.4.7",
+    "colour-science>=0.4.6",
     "imagecodecs>=2025.11.11",
-    "numpy>=2.3.1",
-    "opencv-python>=4.11.0.86",
+    "opencv-python>=4.10.0.82",
     "pillow>=11.3.0",
-    "pillow-heif==0.22.0",
+    "pillow-heif>=0.22.0",
     "pyexiftool>=0.5.6",
 ]
 
