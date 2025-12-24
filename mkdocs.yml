@@ -1,0 +1,70 @@
+site_name: HDR Conversion
+site_description: "HDR format conversion tools - ISO 21496-1, UltraHDR, PQ/HLG support"
+repo_url: https://github.com/Jackchou00/hdr-conversion
+repo_name: hdr-conversion
+
+theme:
+  name: material
+  language: en
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - toc.follow
+    - navigation.top
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+  palette:
+    - scheme: default
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+      primary: teal
+      accent: purple
+    - scheme: slate
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+      primary: teal
+      accent: purple
+
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          paths: [src]
+          options:
+            show_root_heading: true
+            show_source: true
+            show_if_no_docstring: true
+            docstring_style: google
+            heading_level: 2
+  - gen-files:
+      scripts:
+        - docs/gen_ref_pages.py
+  - autorefs:
+
+markdown_extensions:
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __linenumbers__
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences
+  - admonition
+  - pymdownx.details
+
+nav:
+  - Home: index.md
+  - API Reference:
+    - Overview: api/index.md
+    - Core Types: api/core.md
+    - Conversion: api/convert.md
+    - I/O: api/io.md
+    - Identify: api/identify.md
+  - Guides:
+    - Getting Started: guides/getting-started.md
+    - Supported Formats: guides/formats.md
+    - Examples: guides/examples.md
+  - Standards: standards/iso-standards.md
