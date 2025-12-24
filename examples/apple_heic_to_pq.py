@@ -42,9 +42,9 @@ pq_encoded = convert.apply_pq(hdr_bt2020)
 print("\nWriting PQ AVIF...")
 pq_data = {
     "data": pq_encoded,
-    "color_primaries": "bt2020",
-    "transfer_characteristics": "pq",
-    "bit_depth": 10,
+    "color_space": "bt2020",
+    "transfer_function": "pq",
+    "icc_profile": None,
 }
 io.write_22028_pq(pq_data, "output_from_heic.avif")
 

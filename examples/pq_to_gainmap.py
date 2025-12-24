@@ -12,8 +12,8 @@ print("Reading PQ AVIF file...")
 pq_data = io.read_22028_pq("images/iso22028.avif")
 
 print(f"  PQ data shape: {pq_data['data'].shape}")
-print(f"  Color primaries: {pq_data['color_primaries']}")
-print(f"  Transfer: {pq_data['transfer_characteristics']}")
+print(f"  Color space: {pq_data['color_space']}")
+print(f"  Transfer: {pq_data['transfer_function']}")
 
 # Step 2: Convert PQ to linear HDR
 print("\nConverting PQ to linear...")

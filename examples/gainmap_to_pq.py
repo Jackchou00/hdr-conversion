@@ -46,9 +46,9 @@ print(f"  PQ range: [{pq_encoded.min():.4f}, {pq_encoded.max():.4f}]")
 print("\nWriting PQ AVIF...")
 pq_data = {
     "data": pq_encoded,
-    "color_primaries": "bt2020",
-    "transfer_characteristics": "pq",
-    "bit_depth": 10,
+    "color_space": "bt2020",
+    "transfer_function": "pq",
+    "icc_profile": None,
 }
 io.write_22028_pq(pq_data, "output_from_21496.avif")
 

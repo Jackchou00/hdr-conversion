@@ -79,25 +79,6 @@ class HDRImage(TypedDict):
     icc_profile: Optional[bytes]
 
 
-class PQImage(TypedDict):
-    """PQ (Perceptual Quantizer) encoded image for ISO 22028-5.
-
-    This is a specialized format for writing PQ AVIF files.
-    """
-
-    # PQ-encoded data: float32, shape (H, W, 3), range [0, 1]
-    data: np.ndarray
-
-    # Color primaries: 'bt709' (1), 'bt2020' (9), 'p3' (12)
-    color_primaries: str
-
-    # Transfer characteristics: 'pq' (16), 'hlg' (18)
-    transfer_characteristics: str
-
-    # Bit depth for encoding: 10 or 12
-    bit_depth: int
-
-
 class AppleHeicData(TypedDict):
     """Apple HEIC HDR image data.
 

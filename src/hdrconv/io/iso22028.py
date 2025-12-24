@@ -1,10 +1,10 @@
-from hdrconv.core import PQImage
+from hdrconv.core import HDRImage
 
 from imagecodecs import avif_encode, avif_decode
 import numpy as np
 
 
-def read_22028_pq(filepath: str) -> PQImage:
+def read_22028_pq(filepath: str) -> HDRImage:
     """
     Read ISO 22028-5 PQ AVIF file.
 
@@ -12,33 +12,34 @@ def read_22028_pq(filepath: str) -> PQImage:
         filepath: Path to the PQ AVIF file
 
     Returns:
-        PQImage dict containing:
+        HDRImage dict containing:
         - data: float32 array (H, W, 3), PQ-encoded, range [0, 1]
-        - color_primaries: Color space identifier
-        - transfer_characteristics: 'pq' or 'hlg'
-        - bit_depth: 10 or 12
+        - color_space: Color space identifier
+        - transfer_function: 'pq' or 'hlg'
+        - icc_profile: Optional ICC profile (currently not extracted)
     """
     with open(filepath, "rb") as f:
         avif_bytes = f.read()
     image_array = avif_decode(avif_bytes, numthreads=-1)
     # Extract PQ-encoded array (normalized to [0, 1])
+    # Currently hard-coded to 10-bit decode range.
     image_array = image_array / 1023.0
     # TODO: Extract actual color primaries and transfer from AVIF metadata
     # For now, assume BT.2020 PQ which is most common
-    return PQImage(
+    return HDRImage(
         data=image_array,
-        color_primaries="bt2020",
-        transfer_characteristics="pq",
-        bit_depth=10,
+        color_space="bt2020",
+        transfer_function="pq",
+        icc_profile=None,
     )
 
 
-def write_22028_pq(data: PQImage, filepath: str) -> None:
+def write_22028_pq(data: HDRImage, filepath: str) -> None:
     """
     Write ISO 22028-5 PQ AVIF file.
 
     Args:
-        data: PQImage dict with PQ-encoded data and parameters
+        data: HDRImage dict with PQ-encoded data and parameters
         filepath: Output path for the AVIF file
     """
     # Map color primaries to numeric codes
@@ -47,8 +48,8 @@ def write_22028_pq(data: PQImage, filepath: str) -> None:
     # Map transfer characteristics to numeric codes
     transfer_map = {"bt709": 1, "linear": 8, "pq": 16, "hlg": 18}
 
-    primaries_code = primaries_map.get(data["color_primaries"], 9)
-    transfer_code = transfer_map.get(data["transfer_characteristics"], 16)
+    primaries_code = primaries_map.get(data["color_space"], 9)
+    transfer_code = transfer_map.get(data["transfer_function"], 16)
 
     np_array = np.clip(data["data"], 0, 1)
     # scale to [0, 1023]
