@@ -1,14 +1,17 @@
-"""
-Core data structures for HDR conversion.
+"""Core data structures for HDR conversion.
+
+This module contains the TypedDict-based structures used across the library.
 """
 
-from typing import TypedDict, Tuple, Optional
+from __future__ import annotations
+
+from typing import Optional, Tuple, TypedDict
+
 import numpy as np
 
 
 class GainmapMetadata(TypedDict, total=False):
-    """
-    ISO 21496-1 Gainmap metadata following the standard.
+    """ISO 21496-1 Gainmap metadata following the standard.
 
     All fields use standard names from the specification.
     """
@@ -36,8 +39,7 @@ class GainmapMetadata(TypedDict, total=False):
 
 
 class GainmapImage(TypedDict):
-    """
-    Gainmap image representation.
+    """Gainmap image representation.
 
     Contains baseline (SDR) image, gainmap, and metadata.
     """
@@ -57,8 +59,7 @@ class GainmapImage(TypedDict):
 
 
 class HDRImage(TypedDict):
-    """
-    HDR image representation.
+    """HDR image representation.
 
     Linear RGB data with metadata.
     """
@@ -79,8 +80,7 @@ class HDRImage(TypedDict):
 
 
 class PQImage(TypedDict):
-    """
-    PQ (Perceptual Quantizer) encoded image for ISO 22028-5.
+    """PQ (Perceptual Quantizer) encoded image for ISO 22028-5.
 
     This is a specialized format for writing PQ AVIF files.
     """
@@ -99,8 +99,7 @@ class PQImage(TypedDict):
 
 
 class AppleHeicData(TypedDict):
-    """
-    Apple HEIC HDR image data.
+    """Apple HEIC HDR image data.
 
     Contains base image, gainmap, and headroom metadata.
     """

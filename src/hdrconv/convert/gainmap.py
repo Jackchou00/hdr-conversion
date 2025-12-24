@@ -1,14 +1,17 @@
+from __future__ import annotations
+
 from typing import Optional
 import warnings
-import numpy as np
+
 import cv2
+import numpy as np
 
 with warnings.catch_warnings():
     warnings.filterwarnings("ignore")
     import colour
 
-from PIL import Image
-from hdrconv.core import GainmapImage, HDRImage, AppleHeicData, GainmapMetadata
+from hdrconv.core import GainmapImage, GainmapMetadata, HDRImage
+from hdrconv.convert.colorspace import convert_color_space
 
 
 def gainmap_to_hdr(
@@ -17,8 +20,7 @@ def gainmap_to_hdr(
     alt_color_space: str = "p3",
     target_color_space: str = "bt2020",
 ) -> HDRImage:
-    """
-    Convert Gainmap image to linear HDR using ISO 21496-1 formula.
+    """Convert Gainmap image to linear HDR using ISO 21496-1 formula.
 
     Applies the gainmap to baseline to reconstruct the alternate (HDR) image.
 
@@ -42,7 +44,6 @@ def gainmap_to_hdr(
         >>> linear_rgb = hdr['data']  # Linear light, float32
     """
     baseline = data["baseline"].astype(np.float32) / 255.0  # Normalize to [0, 1]
-    # linear baseline
     baseline = colour.eotf(baseline, function="sRGB")
     gainmap = data["gainmap"].astype(np.float32) / 255.0
     metadata = data["metadata"]
@@ -79,7 +80,6 @@ def gainmap_to_hdr(
     baseline_offset = np.array(metadata["baseline_offset"], dtype=np.float32)
     alternate_offset = np.array(metadata["alternate_offset"], dtype=np.float32)
 
-    # Apply ISO 21496-1 reconstruction formula
     gainmap = np.clip(gainmap, 0.0, 1.0)
 
     # Decode gainmap: apply gamma, scale, and offset
@@ -105,7 +105,6 @@ def gainmap_to_hdr(
             target_space=target_color_space,
         )
 
-    # clip negative values
     hdr_linear = np.clip(hdr_linear, 0.0, None)
 
     return HDRImage(
@@ -123,8 +122,7 @@ def hdr_to_gainmap(
     icc_profile: Optional[bytes] = None,
     gamma: float = 1.0,
 ) -> GainmapImage:
-    """
-    Convert linear HDR to Gainmap format.
+    """Convert linear HDR to Gainmap format.
 
     Creates a gainmap by computing the ratio between HDR and SDR images.
     If baseline is not provided, generates one using tone mapping.
@@ -141,57 +139,46 @@ def hdr_to_gainmap(
     """
     hdr_data = hdr["data"].astype(np.float32)
 
-    # convert to p3 colour space
+    # convert to target colour space
     hdr_data = convert_color_space(
         hdr_data, source_space=hdr["color_space"], target_space=color_space
     )
 
-    # Ensure HDR data is non-negative to avoid NaN in log2
     hdr_data = np.clip(hdr_data, 0.0, None)
 
     # Generate baseline if not provided
     if baseline is None:
-        # Clipping
         baseline = hdr_data.copy()
         baseline = np.clip(baseline, 0.0, 1.0)
 
     # Compute alt headroom
     alt_headroom = np.log2(hdr_data.max() + 1e-6)
 
-    # Compute gainmap from ratio
     # preset offset for both baseline and alternate = 1/64
     alt_offset = float(1 / 64)
     base_offset = float(1 / 64)
-    # Avoid division by zero
-    ratio = (hdr_data + alt_offset) / (baseline + base_offset)
 
-    # Ensure ratio is positive before log2 (clip to small positive value)
+    ratio = (hdr_data + alt_offset) / (baseline + base_offset)
     ratio = np.clip(ratio, 1e-6, None)
 
-    # Convert to log2 space
     gainmap_log = np.log2(ratio)
 
-    # Determine gainmap range based on data
     gainmap_min_val = np.min(gainmap_log, axis=(0, 1))
     gainmap_max_val = np.max(gainmap_log, axis=(0, 1))
 
-    # Normalize gainmap to [0, 1]
     gainmap_norm = (gainmap_log - gainmap_min_val) / (gainmap_max_val - gainmap_min_val)
     gainmap_norm = np.clip(gainmap_norm, 0, 1)
 
-    # Apply gamma encoding
     gainmap_norm = gainmap_norm**gamma
 
-    # Convert to uint8
     gainmap_uint8 = (gainmap_norm * 255).astype(np.uint8)
+
     baseline = colour.eotf_inverse(baseline, function="sRGB")
     baseline_uint8 = (baseline * 255).astype(np.uint8)
 
-    # convert to tuple(float, float, float)
     gainmap_min_val = tuple(gainmap_min_val.tolist())
     gainmap_max_val = tuple(gainmap_max_val.tolist())
 
-    # Create metadata
     metadata = GainmapMetadata(
         minimum_version=0,
         writer_version=0,
@@ -213,158 +200,3 @@ def hdr_to_gainmap(
         baseline_icc=icc_profile,
         gainmap_icc=icc_profile,
     )
-
-
-def apple_heic_to_hdr(data: AppleHeicData) -> HDRImage:
-    """
-    Convert Apple HEIC data to linear HDR.
-
-    Uses Apple's gain map formula:
-        hdr_rgb = sdr_rgb * (1.0 + (headroom - 1.0) * gainmap)
-
-    Args:
-        data: AppleHeicData dict with base, gainmap, and headroom
-
-    Returns:
-        HDRImage dict with linear HDR in Display P3 space
-
-    Example:
-        >>> heic = read_apple_heic('IMG_1234.HEIC')
-        >>> hdr = apple_heic_to_hdr(heic)
-        >>> linear_p3 = hdr['data']
-    """
-
-    def apply_gain_map(
-        base_image: np.ndarray, gain_map: np.ndarray, headroom: float
-    ) -> np.ndarray:
-        """
-        Applies the HDR gain map to the base SDR image to reconstruct the HDR image.
-
-        Args:
-            base_image (np.ndarray): The base SDR image as a NumPy array.
-            gain_map (np.ndarray): The HDR gain map as a NumPy array.
-            headroom (float): The headroom factor indicating the maximum gain.
-
-        Returns:
-            np.ndarray: The reconstructed HDR image.
-        """
-        if base_image is None or gain_map is None:
-            raise ValueError("Both base_image and gain_map must be provided.")
-
-        # Step 1: Resize the gainmap to match the base image's resolution.
-        gain_map_resized = np.array(
-            Image.fromarray(gain_map).resize(
-                (base_image.shape[1], base_image.shape[0]), Image.BILINEAR
-            )
-        )
-
-        # Step 2: Linearize the gainmap.
-        # The gain map is typically a single-channel image with values in [0, 255].
-        # We need to convert it to a linear scale [0, 1] for proper multiplication.
-        gain_map_norm = gain_map_resized.astype(np.float32) / 255.0
-        # gain_map_linear = colour.oetf_inverse(gain_map_norm, "ITU-R BT.709")
-        gain_map_linear = np.where(
-            gain_map_norm <= 0.08145,
-            gain_map_norm / 4.5,
-            np.power((gain_map_norm + 0.099) / 1.099, 1 / 0.45),
-        )
-        gain_map_linear = np.clip(gain_map_linear, 0.0, 1.0)
-        # Step 3: Linearize the SDR image.
-        base_image_norm = base_image.astype(np.float32) / 255.0
-        # base_image_linear = colour.eotf(base_image_norm, "sRGB")
-        base_image_linear = np.where(
-            base_image_norm <= 0.04045,
-            base_image_norm / 12.92,
-            np.power((base_image_norm + 0.055) / 1.055, 2.4),
-        )
-        base_image_linear = np.clip(base_image_linear, 0.0, 1.0)
-        # hdr_rgb = sdr_rgb * (1.0 + (headroom - 1.0) * gainmap)
-        hdr_image_linear = base_image_linear * (
-            1.0 + (headroom - 1.0) * gain_map_linear[..., np.newaxis]
-        )
-        hdr_image_linear = np.clip(hdr_image_linear, 0.0, None)
-        return hdr_image_linear
-
-    hdr_linear = apply_gain_map(data["base"], data["gainmap"], data["headroom"])
-
-    return HDRImage(
-        data=hdr_linear,
-        color_space="p3",  # Apple uses Display P3
-        transfer_function="linear",
-        icc_profile=None,
-    )
-
-
-def convert_color_space(
-    image: np.ndarray, source_space: str, target_space: str, clip: bool = False
-) -> np.ndarray:
-    """
-    Convert image between color spaces (requires linear input).
-
-    Args:
-        image: Linear RGB image data, float32, shape (H, W, 3)
-        source_space: Source color space ('bt709', 'p3', 'bt2020')
-        target_space: Target color space ('bt709', 'p3', 'bt2020')
-        clip: Whether to clip output to [0, inf)]
-
-    Returns:
-        Converted image in target color space
-
-    Example:
-        >>> # Convert from Display P3 to BT.2020
-        >>> rgb_bt2020 = convert_color_space(rgb_p3, 'p3', 'bt2020')
-    """
-    space_map = {"bt709": "ITU-R BT.709", "p3": "DCI-P3", "bt2020": "ITU-R BT.2020"}
-
-    if source_space == target_space:
-        return image
-
-    source_name = space_map.get(source_space, source_space)
-    target_name = space_map.get(target_space, target_space)
-
-    target_image = colour.RGB_to_RGB(
-        image, input_colourspace=source_name, output_colourspace=target_name
-    )
-
-    if clip:
-        target_image = np.clip(target_image, 0.0, None)
-    return target_image
-
-
-def apply_pq(linear_rgb: np.ndarray) -> np.ndarray:
-    """
-    Apply PQ (Perceptual Quantizer) transfer function.
-
-    Args:
-        linear_rgb: Linear RGB data, float32, shape (H, W, 3)
-        max_nits: Maximum luminance in nits for normalization
-
-    Returns:
-        PQ-encoded data, range [0, 1]
-
-    Example:
-        >>> pq_encoded = apply_pq(linear_hdr, max_nits=1000)
-    """
-    # Normalize to reference white (203 nits in PQ)
-    pq_encoded = colour.models.eotf_inverse_BT2100_PQ(linear_rgb * 203.0)
-    # clip to [0, 1]
-    pq_encoded = np.clip(pq_encoded, 0.0, 1.0)
-    return pq_encoded
-
-
-def inverse_pq(pq_encoded: np.ndarray) -> np.ndarray:
-    """
-    Apply inverse PQ to get linear RGB.
-
-    Args:
-        pq_encoded: PQ-encoded data, range [0, 1]
-
-    Returns:
-        Linear RGB data
-
-    Example:
-        >>> linear_hdr = inverse_pq(pq_encoded)
-    """
-    linear_normalized = colour.models.eotf_BT2100_PQ(pq_encoded)
-    linear_rgb = linear_normalized / 203.0
-    return linear_rgb
