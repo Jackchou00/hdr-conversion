@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+    <url>
+         <loc>https://jackchou.top/hdr-conversion/</loc>
+         <lastmod>2025-12-24</lastmod>
+    </url>
+    <url>
+         <loc>https://jackchou.top/hdr-conversion/examples/</loc>
+         <lastmod>2025-12-24</lastmod>
+    </url>
+    <url>
+         <loc>https://jackchou.top/hdr-conversion/api/</loc>
+         <lastmod>2025-12-24</lastmod>
+    </url>
+    <url>
+         <loc>https://jackchou.top/hdr-conversion/api/convert/</loc>
+         <lastmod>2025-12-24</lastmod>
+    </url>
+    <url>
+         <loc>https://jackchou.top/hdr-conversion/api/core/</loc>
+         <lastmod>2025-12-24</lastmod>
+    </url>
+    <url>
+         <loc>https://jackchou.top/hdr-conversion/api/identify/</loc>
+         <lastmod>2025-12-24</lastmod>
+    </url>
+    <url>
+         <loc>https://jackchou.top/hdr-conversion/api/io/</loc>
+         <lastmod>2025-12-24</lastmod>
+    </url>
+</urlset>
