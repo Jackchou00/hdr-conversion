@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Optional
 import warnings
 
-import cv2
+from PIL import Image
 import numpy as np
 
 with warnings.catch_warnings():
@@ -65,7 +65,20 @@ def gainmap_to_hdr(
     # Resize gainmap to match baseline if needed
     h, w = baseline.shape[:2]
     if gainmap.shape[:2] != (h, w):
-        gainmap = cv2.resize(gainmap, (w, h), interpolation=cv2.INTER_LINEAR)
+        # Use Pillow for resizing: convert float32 [0,1] -> uint8 [0,255] -> resize -> back to float32
+        gainmap_uint8 = np.clip(gainmap * 255.0, 0, 255).astype(np.uint8)
+
+        # Handle 2D grayscale and 3D RGB arrays
+        if gainmap_uint8.ndim == 2:
+            pil_image = Image.fromarray(gainmap_uint8, mode="L")
+        else:
+            pil_image = Image.fromarray(gainmap_uint8, mode="RGB")
+
+        # Resize using bilinear interpolation (equivalent to cv2.INTER_LINEAR)
+        pil_image_resized = pil_image.resize((w, h), Image.BILINEAR)
+
+        # Convert back to float32 [0,1]
+        gainmap = np.array(pil_image_resized, dtype=np.float32) / 255.0
 
     # Ensure gainmap is 3-channel for calculations
     if gainmap.ndim == 2:

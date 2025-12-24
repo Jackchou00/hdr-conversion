@@ -4,6 +4,7 @@ from hdrconv.core import GainmapImage
 
 import io
 import struct
+import warnings
 from fractions import Fraction
 from typing import Any, Dict, Generator, List, Optional, Tuple
 
@@ -573,8 +574,15 @@ def read_21496(filepath: str) -> GainmapImage:
         raise ValueError("No gainmap found in container (MPF missing or invalid).")
 
     # 2. Decode Images
-    base_img = Image.open(io.BytesIO(primary_data)).convert("RGB")
-    gain_img = Image.open(io.BytesIO(gainmap_data)).convert("RGB")
+    # Suppress MPO-related warnings from Pillow when reading JPEG streams
+    with warnings.catch_warnings():
+        warnings.filterwarnings(
+            "ignore",
+            message="Image appears to be a malformed MPO file",
+            category=UserWarning,
+        )
+        base_img = Image.open(io.BytesIO(primary_data)).convert("RGB")
+        gain_img = Image.open(io.BytesIO(gainmap_data)).convert("RGB")
 
     base_arr = np.array(base_img)
     gain_arr = np.array(gain_img)

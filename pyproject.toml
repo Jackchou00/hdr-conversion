@@ -7,7 +7,6 @@ requires-python = ">=3.11"
 dependencies = [
     "colour-science>=0.4.6",
     "imagecodecs>=2025.11.11",
-    "opencv-python>=4.10.0.82",
     "pillow>=11.3.0",
     "pillow-heif>=0.22.0",
     "pyexiftool>=0.5.6",
