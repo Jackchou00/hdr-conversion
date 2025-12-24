@@ -1,0 +1,28 @@
+name: Deploy Documentation
+
+on:
+  push:
+    branches:
+      - main
+      - doc
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          enable-cache: true
+
+      - name: Create environment
+        run: uv sync --dev
+
+      - name: Build and deploy docs
+        run: uv run mkdocs gh-deploy --force

@@ -1,3 +1,16 @@
+"""ISO 21496-1 Gainmap JPEG I/O operations.
+
+This module provides functions for reading and writing ISO 21496-1 compliant
+gainmap JPEG files using Multi-Picture Format (MPF) container structure.
+
+Public APIs:
+    - `read_21496`: Read gainmap JPEG to GainmapImage
+    - `write_21496`: Write GainmapImage to gainmap JPEG
+
+The ISO 21496-1 format embeds a gainmap as a secondary image in an MPF
+container, with metadata stored in APP2 segments using a specific URN.
+"""
+
 from __future__ import annotations
 from hdrconv.core import GainmapImage
 
@@ -31,8 +44,22 @@ ISO21496_URN_ALT = b"urn:iso:std:iso:ts:21496:-1"  # Some writers omit null
 
 
 def _yield_jpeg_segments(data: bytes) -> Generator[Tuple[int, bytes], None, None]:
-    """
-    Yields (marker_code, payload) for segments before the image scan (SOS).
+    """Yield JPEG segments from raw file data.
+
+    Parses JPEG marker segments from the start of file up to the Start of Scan
+    (SOS) marker, yielding each segment's marker code and payload.
+
+    Args:
+        data: Raw JPEG file bytes starting with SOI marker.
+
+    Yields:
+        Tuple of (marker_code, payload) where marker_code is the 16-bit
+        marker (e.g., 0xFFE2 for APP2) and payload is the segment data
+        excluding the marker and length bytes.
+
+    Note:
+        Stops scanning at SOS to avoid parsing compressed image data.
+        Skips standalone markers (RSTn, TEM) that have no payload.
     """
     if data[:2] != SOI:
         return
@@ -86,7 +113,22 @@ def _yield_jpeg_segments(data: bytes) -> Generator[Tuple[int, bytes], None, None
 
 
 def _extract_icc(segments: List[Tuple[int, bytes]]) -> Optional[bytes]:
-    """Combines split ICC chunks from APP2 segments."""
+    """Extract and reassemble ICC profile from APP2 segments.
+
+    ICC profiles may be split across multiple APP2 segments when larger
+    than the maximum segment size. This function reassembles them.
+
+    Args:
+        segments: List of (marker_code, payload) tuples from JPEG parsing.
+
+    Returns:
+        Complete ICC profile bytes if found, None otherwise.
+
+    Note:
+        Handles chunked ICC profiles with sequence numbers.
+        Validates chunk consistency but assembles available chunks
+        even if some are missing.
+    """
     chunks = {}
     expected_total = None
 
@@ -195,8 +237,21 @@ def _find_mpf_gainmap_offset(segments: List[Tuple[int, bytes]], file_len: int) -
 
 
 def _split_mpf_container(data: bytes) -> Tuple[bytes, bytes]:
-    """
-    Splits a JPEG file into (Primary, Gainmap) based on MPF or simple search.
+    """Split MPF container into primary and secondary images.
+
+    Parses the Multi-Picture Format (MPF) structure to locate and
+    extract the primary baseline image and secondary gainmap image.
+
+    Args:
+        data: Complete JPEG file bytes containing MPF structure.
+
+    Returns:
+        Tuple of (primary_bytes, gainmap_bytes). If MPF parsing fails
+        or no secondary image is found, gainmap_bytes will be empty.
+
+    Note:
+        Uses MPF Index IFD to locate the offset of the second image.
+        Falls back to returning only primary if split fails.
     """
     # 1. Scan for MPF Segment
     pos = 0
@@ -550,19 +605,34 @@ def _build_mpf_minimal_payload(num_images: int) -> bytes:
 
 
 def read_21496(filepath: str) -> GainmapImage:
-    """
-    Read ISO 21496-1 Gainmap JPEG file.
+    """Read ISO 21496-1 Gainmap JPEG file.
+
+    Parses a JPEG file containing an ISO 21496-1 compliant gainmap with
+    Multi-Picture Format (MPF) container structure.
 
     Args:
-        filepath: Path to the ISO 21496-1 JPEG file
+        filepath: Path to the ISO 21496-1 JPEG file.
 
     Returns:
         GainmapImage dict containing:
-        - baseline: uint8 array (H, W, 3), range [0, 255]
-        - gainmap: uint8 array (H, W, 3) or (H, W, 1), range [0, 255]
-        - metadata: ISO21496GainmapMetadata dict
-        - baseline_icc: Optional ICC profile bytes
-        - gainmap_icc: Optional ICC profile bytes
+        - ``baseline`` (np.ndarray): SDR image, uint8, shape (H, W, 3), range [0, 255].
+        - ``gainmap`` (np.ndarray): Gain map, uint8, shape (H, W, 3) or (H, W, 1).
+        - ``metadata`` (GainmapMetadata): Transformation parameters including
+            gamma, min/max values, offsets, and headroom.
+        - ``baseline_icc`` (bytes | None): ICC profile for baseline image.
+        - ``gainmap_icc`` (bytes | None): ICC profile for gainmap.
+
+    Raises:
+        ValueError: If gainmap is not found in MPF container.
+        ValueError: If ISO 21496-1 metadata segment is missing.
+
+    Note:
+        The file must contain a valid MPF structure with the gainmap as
+        the secondary image and ISO 21496-1 metadata in an APP2 segment.
+
+    See Also:
+        - `write_21496`: Write GainmapImage to ISO 21496-1 format.
+        - `gainmap_to_hdr`: Convert GainmapImage to linear HDR.
     """
     with open(filepath, "rb") as f:
         raw_data = f.read()
@@ -622,12 +692,31 @@ def read_21496(filepath: str) -> GainmapImage:
 
 
 def write_21496(data: GainmapImage, filepath: str) -> None:
-    """
-    Write ISO 21496-1 Gainmap JPEG file.
+    """Write ISO 21496-1 Gainmap JPEG file.
 
-    Args:
-        data: GainmapImage dict with baseline, gainmap, and metadata
-        filepath: Output path for the JPEG file
+        Creates a JPEG file with ISO 21496-1 compliant gainmap structure using
+        Multi-Picture Format (MPF) container.
+
+        Args:
+            data: GainmapImage dict containing:
+                - ``baseline``: SDR image, uint8, shape (H, W, 3).
+                - ``gainmap``: Gain map, uint8, shape (H, W, 3) or (H, W, 1).
+                - ``metadata``: GainmapMetadata with transformation parameters.
+                - ``baseline_icc``: Optional ICC profile for baseline.
+                - ``gainmap_icc``: Optional ICC profile for gainmap.
+            filepath: Output path for the JPEG file.
+
+        Raises:
+            RuntimeError: If file writing fails.
+
+        Note:
+            The output file structure places the baseline image first with an
+            MPF index, followed by the gainmap with ISO 21496-1 metadata.
+            JPEG quality is set to 95 with 4:4:4 chroma subsampling.
+
+        See Also:
+            - `read_21496`: Read ISO 21496-1 Gainmap JPEG.
+            - `hdr_to_gainmap`: Convert HDR image to GainmapImage.
     """
     try:
         # 1. 编码 Gainmap 图像 (基础 JPEG 编码)

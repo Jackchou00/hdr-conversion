@@ -1,9 +1,13 @@
-"""
-Identify all aux images from HEIC files shot by iPhone.
+"""Apple HEIC HDR format identification.
 
-Modified from: https://github.com/finnschi/heic-shenanigans/blob/main/gain_map_extract.py
+This module provides functions for detecting HDR content in Apple HEIC files
+by checking for the presence of gain map auxiliary images.
 
-iPhone's Gainmap is an auxiliary image with 1/4 the resolution of the main image and a single channel.
+Apple stores HDR gain maps with the URN:
+    urn:com:apple:photo:2020:aux:hdrgainmap
+
+Public APIs:
+    - `has_gain_map`: Check if HEIC file contains HDR gain map
 """
 
 import pillow_heif
@@ -14,17 +18,23 @@ HDR_GAIN_MAP_URN = "urn:com:apple:photo:2020:aux:hdrgainmap"
 
 
 def has_gain_map(input_path: str) -> bool:
-    """
-    Checks if a HEIC file contains auxiliary images and prints all auxiliary image IDs.
+    """Check if Apple HEIC file contains HDR gain map.
 
-    This function reads a HEIC file, prints all found auxiliary image IDs,
-    and returns True if auxiliary images are present, False otherwise.
+        Scans the auxiliary images in a HEIC file to detect the presence of
+        Apple's HDR gain map (URN: urn:com:apple:photo:2020:aux:hdrgainmap).
 
-    Args:
-        input_path (str): Path to the input HEIC image file.
+        Args:
+            input_path: Path to the input HEIC image file.
 
-    Returns:
-        bool: True if auxiliary images are found, False otherwise.
+        Returns:
+            True if an HDR gain map auxiliary image is found, False otherwise.
+
+        Note:
+            This function does not validate the gain map data itself, only
+            checks for its presence in the file metadata.
+
+        See Also:
+            - `read_apple_heic`: Extract gain map data from HEIC file.
     """
     has_gain_map = False
     heif_file = pillow_heif.read_heif(input_path, convert_hdr_to_8bit=False)

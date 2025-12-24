@@ -4,6 +4,8 @@
 
 > Note: In alpha stage, API may change frequently. Currently, color conversion may be incorrect.
 
+API Reference: [https://jackchou.top/hdr-conversion](https://jackchou.top/hdr-conversion/)
+
 ## Project Overview
 
 This project provides Python-based research on HDR format parsing and writing, supporting parsing, writing, and conversion of multiple formats including UltraHDR, Adaptive Gainmap (ISO 21496-1), and pure PQ/HLG formats (ISO 22028-5).

@@ -1,8 +1,12 @@
-"""Conversion algorithms.
+"""HDR conversion algorithms.
 
-Public APIs are exposed here so users can call:
-    - ``hdrconv.convert.gainmap_to_hdr``
-    - ``hdrconv.convert.apply_pq``
+This module provides functions for converting between HDR formats and applying
+color space and transfer function transformations:
+
+- Gainmap conversion: `gainmap_to_hdr`, `hdr_to_gainmap`
+- Apple HEIC conversion: `apple_heic_to_hdr`
+- Color space conversion: `convert_color_space`
+- Transfer functions: `apply_pq`, `inverse_pq`
 """
 
 from hdrconv.convert.apple import apple_heic_to_hdr

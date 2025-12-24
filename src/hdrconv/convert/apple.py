@@ -1,3 +1,19 @@
+"""Apple HEIC HDR conversion utilities.
+
+This module provides functions for converting Apple's proprietary HEIC
+HDR format (with gain map) to standard linear HDR representation.
+
+Apple's HDR format uses a single-channel gain map with the formula:
+    hdr_rgb = sdr_rgb * (1.0 + (headroom - 1.0) * gainmap)
+
+Public APIs:
+    - `apple_heic_to_hdr`: Convert AppleHeicData to HDRImage
+
+See Also:
+    Apple Developer Documentation:
+    https://developer.apple.com/documentation/appkit/applying-apple-hdr-effect-to-your-photos
+"""
+
 from __future__ import annotations
 
 import numpy as np
@@ -7,21 +23,37 @@ from hdrconv.core import AppleHeicData, HDRImage
 
 
 def apple_heic_to_hdr(data: AppleHeicData) -> HDRImage:
-    """Convert Apple HEIC data to linear HDR.
+    """Convert Apple HEIC gain map data to linear HDR.
 
-    Uses Apple's gain map formula:
-        hdr_rgb = sdr_rgb * (1.0 + (headroom - 1.0) * gainmap)
+        Applies Apple's proprietary gain map formula to reconstruct the HDR image
+        from the SDR base and single-channel gain map.
 
-    Args:
-        data: AppleHeicData dict with base, gainmap, and headroom
+        The reconstruction formula is:
+            hdr_rgb = sdr_rgb * (1.0 + (headroom - 1.0) * gainmap)
 
-    Returns:
-        HDRImage dict with linear HDR in Display P3 space
+        Where all values are in linear light space.
 
-    Example:
-        >>> heic = read_apple_heic('IMG_1234.HEIC')
-        >>> hdr = apple_heic_to_hdr(heic)
-        >>> linear_p3 = hdr['data']
+        Args:
+            data: AppleHeicData dict containing:
+                - `base`: SDR image, uint8, shape (H, W, 3), Display P3.
+                - `gainmap`: Gain map, uint8, shape (H, W, 1).
+                - `headroom`: Peak luminance multiplier.
+
+        Returns:
+            HDRImage dict with the following keys:
+            - ``data`` (np.ndarray): Linear HDR array, float32, shape (H, W, 3).
+            - ``color_space`` (str): 'p3' (Display P3, Apple's default).
+            - ``transfer_function`` (str): 'linear'.
+            - ``icc_profile`` (bytes | None): None.
+
+        Note:
+            The gain map is upscaled from 1/4 resolution using bilinear interpolation.
+            Both base image (sRGB transfer) and gain map (Rec. 709 transfer) are
+            linearized before applying the formula.
+
+        See Also:
+            - `read_apple_heic`: Read AppleHeicData from HEIC file.
+            - `convert_color_space`: Convert output to BT.2020 if needed.
     """
 
     def apply_gain_map(

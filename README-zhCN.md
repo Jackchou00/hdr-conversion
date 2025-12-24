@@ -4,6 +4,8 @@
 
 > 注意：处于开发阶段，API 可能会频繁变动。目前，颜色转换可能不正确。
 
+API 参考文档: [https://jackchou.top/hdr-conversion](https://jackchou.top/hdr-conversion/)
+
 ## 项目简介
 
 本项目提供基于 Python 的 HDR 格式解析与写入研究，支持包括 UltraHDR、Adaptive Gainmap (ISO 21496-1) 以及纯 PQ/HLG 格式 (ISO 22028-5) 在内的多种格式的解析、写入和转换。

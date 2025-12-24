@@ -1,3 +1,19 @@
+"""Apple HEIC HDR format I/O operations.
+
+This module provides functions for reading Apple's proprietary HDR format
+from iPhone HEIC photos, which contains a base SDR image and a single-channel
+gain map as an auxiliary image.
+
+Public APIs:
+    - `read_apple_heic`: Read HEIC file to AppleHeicData
+
+The gain map uses Apple's URN (urn:com:apple:photo:2020:aux:hdrgainmap) and
+is stored at 1/4 resolution of the main image.
+
+Note:
+    Requires exiftool to be installed for headroom metadata extraction.
+"""
+
 import pillow_heif
 import numpy as np
 from PIL import Image
@@ -22,19 +38,26 @@ HDR_GAIN_MAP_URN = "urn:com:apple:photo:2020:aux:hdrgainmap"
 
 
 def read_base_and_gain_map(input_path: str) -> Tuple[np.ndarray, Optional[np.ndarray]]:
-    """
-    Reads the base image and HDR gain map from a HEIC file and returns them as NumPy arrays.
+    """Read base image and HDR gain map from Apple HEIC file.
 
-    This function specifically looks for the auxiliary image identified by the URN
-    'urn:com:apple:photo:2020:aux:hdrgainmap' as the gain map.
+    Extracts the primary image and the auxiliary HDR gain map identified
+    by Apple's proprietary URN from a HEIC file.
 
     Args:
-        input_path (str): Path to the input HEIC image file.
+        input_path: Path to the input HEIC image file.
 
     Returns:
-        A tuple containing two elements (base_image, gain_map):
-        - base_image (np.ndarray): NumPy array of the main image.
-        - gain_map (np.ndarray | None): NumPy array of the HDR gain map.
+        Tuple of (base_image, gain_map) where:
+        - ``base_image`` (np.ndarray): Main image, uint8/uint16, shape (H, W, 3).
+        - ``gain_map`` (np.ndarray | None): Gain map if found, shape (H, W),
+            or None if no HDR gain map auxiliary image exists.
+
+    Raises:
+        Exception: If the HEIC file cannot be read.
+
+    Note:
+        The gain map is typically at 1/4 resolution of the base image
+        and uses a single grayscale channel.
     """
     try:
         heif_file = pillow_heif.read_heif(input_path, convert_hdr_to_8bit=False)
@@ -131,17 +154,30 @@ def get_headroom(file_path: str | Path, use_makernote: bool = False) -> float:
 
 
 def read_apple_heic(filepath: str) -> AppleHeicData:
-    """
-    Read Apple HEIC HDR file.
+    """Read Apple HEIC HDR file with gain map.
 
-    Args:
-        filepath: Path to the Apple HEIC file
+        Extracts the base SDR image, HDR gain map, and headroom metadata from
+        iPhone HEIC photos containing Apple's proprietary HDR format.
 
-    Returns:
-        AppleHeicData dict containing:
-        - base: uint8 array (H, W, 3), Display P3, range [0, 255]
-        - gainmap: uint8 array (H, W, 1), single channel, range [0, 255]
-        - headroom: float, gain headroom value
+        Args:
+            filepath: Path to the Apple HEIC file.
+
+        Returns:
+            AppleHeicData dict containing:
+            - ``base`` (np.ndarray): SDR image, uint8, shape (H, W, 3), Display P3.
+            - ``gainmap`` (np.ndarray): Gain map, uint8, shape (H, W, 1), 1/4 resolution.
+            - ``headroom`` (float): Peak luminance headroom, typically 2.0-8.0.
+
+        Raises:
+            ValueError: If base image, gainmap, or headroom cannot be extracted.
+            
+        Note:
+            Requires exiftool to be installed and accessible in PATH for
+            headroom extraction from EXIF/MakerNotes metadata.
+
+        See Also:
+            - `apple_heic_to_hdr`: Convert AppleHeicData to linear HDR.
+            - `has_gain_map`: Check if HEIC file contains gain map.
     """
 
     base, gainmap = read_base_and_gain_map(filepath)

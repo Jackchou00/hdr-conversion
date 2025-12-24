@@ -1,9 +1,11 @@
-"""HDR format I/O.
+"""HDR format I/O operations.
 
-Public APIs are exposed here so users can call:
-    - ``hdrconv.io.read_21496`` / ``hdrconv.io.write_21496``
-    - ``hdrconv.io.read_22028_pq`` / ``hdrconv.io.write_22028_pq``
-    - ``hdrconv.io.read_apple_heic``
+This module provides functions for reading and writing various HDR formats:
+
+- ISO 21496-1 (Adaptive Gainmap): `read_21496`, `write_21496`
+- ISO 22028-5 (PQ/HLG AVIF): `read_22028_pq`, `write_22028_pq`
+- Apple HEIC with gainmap: `read_apple_heic`
+
 """
 
 from .iso21496 import read_21496, write_21496

@@ -166,7 +166,7 @@ wheels = [
 
 [[package]]
 name = "hdr-conversion"
-version = "0.1.0a2"
+version = "0.1.0"
 source = { editable = "." }
 dependencies = [
     { name = "colour-science" },
