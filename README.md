@@ -3,6 +3,8 @@
 [简体中文](README-zhCN.md) | [English](README.md)
 
 > Note: In alpha stage, API may change frequently. Currently, color conversion may be incorrect.
+>
+> Note: PyExifTool requires the exiftool executable in the system path, see [https://exiftool.org/](https://exiftool.org/) . Otherwise, reading Apple HEIC may hang without prompt. Please use `exiftool -ver` to check if it is installed correctly. This issue will be fixed in the next version.
 
 API Reference: [https://jackchou.top/hdr-conversion](https://jackchou.top/hdr-conversion/)
 
