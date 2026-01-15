@@ -6,7 +6,7 @@
 >
 > 注意：PyExifTool 需要系统路径中有 exiftool 可执行文件，详见 [https://exiftool.org/](https://exiftool.org/) 。否则读取 Apple HEIC 时会无提示的卡住，请使用 `exiftool -ver` 检查是否有效安装，下个版本将会修复此问题。
 
-API 参考文档: [https://jackchou.top/hdr-conversion](https://jackchou.top/hdr-conversion/)
+API 参考文档: [https://jackchou00.github.io/hdr-conversion](https://jackchou00.github.io/hdr-conversion/)
 
 ## 项目简介
 
