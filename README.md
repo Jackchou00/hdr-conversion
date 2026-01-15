@@ -52,6 +52,8 @@ Writes image data and structured metadata into corresponding formats.
 
 UltraHDR and Adaptive Gainmap formats are implemented through manual byte stream editing combined with existing library JPEG encoding capabilities, while pure PQ/HLG formats are implemented through existing libraries.
 
+UltraHDR I/O APIs: `read_ultrahdr()` / `write_ultrahdr()`.
+
 ### Conversion
 
 Calculates alternate images based on metadata to enable conversion between Gainmap and pure HDR formats.

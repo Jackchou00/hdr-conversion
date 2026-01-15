@@ -66,6 +66,38 @@ pq_data = {
 io.write_22028_pq(pq_data, "output.avif")
 ```
 
+## Apple HEIC → Gainmap JPEG (ISO 21496-1 + UltraHDR)
+
+Generate both ISO 21496-1 and UltraHDR JPEGs from Apple HEIC:
+
+```python
+import hdrconv.io as io
+import hdrconv.convert as convert
+
+# Read Apple HEIC
+heic_data = io.read_apple_heic("photo.HEIC")
+
+# Convert to linear HDR (Display P3)
+hdr = convert.apple_heic_to_hdr(heic_data)
+
+# Load Display P3 ICC
+with open("icc/Display P3.icc", "rb") as f:
+    p3_icc = f.read()
+
+# Generate Gainmap (baseline in P3)
+gainmap_data = convert.hdr_to_gainmap(
+    hdr,
+    baseline=None,
+    color_space="p3",
+    icc_profile=p3_icc,
+    gamma=1.0,
+)
+
+# Write ISO 21496-1 and UltraHDR
+io.write_21496(gainmap_data, "output_iso21496.jpg")
+io.write_ultrahdr(gainmap_data, "output_uhdr.jpg")
+```
+
 ## PQ AVIF → ISO 21496-1 Gainmap
 
 Convert PQ AVIF to ISO 21496-1 Gainmap format:

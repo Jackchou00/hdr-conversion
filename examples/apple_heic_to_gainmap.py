@@ -50,7 +50,13 @@ print(f"  Headroom: {gainmap_data['metadata']['alternate_hdr_headroom']:.2f}")
 
 # Step 5: Write ISO 21496-1 JPEG
 print("\nWriting ISO 21496-1 file...")
-io.write_21496(gainmap_data, "output_from_heic_gainmap.jpg")
+io.write_21496(gainmap_data, "output_from_heic_gainmap_iso21496.jpg")
+
+# Step 6: Write UltraHDR JPEG
+print("Writing UltraHDR file...")
+io.write_ultrahdr(gainmap_data, "output_from_heic_gainmap_uhdr.jpg")
 
 print("✓ Conversion complete!")
-print("\nOutput: output_from_heic_gainmap.jpg")
+print("\nOutputs:")
+print("  - output_from_heic_gainmap_iso21496.jpg")
+print("  - output_from_heic_gainmap_uhdr.jpg")

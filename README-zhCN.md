@@ -52,6 +52,8 @@ import hdrconv
 
 其中，UltraHDR 和 Adaptive Gainmap 格式通过手动编辑字节流与现有库提供的 JPEG 编码能力实现，而纯 PQ/HLG 格式则通过现有的库实现。
 
+UltraHDR I/O 接口：`read_ultrahdr()` / `write_ultrahdr()`。
+
 ### 转换
 
 根据元数据计算替代图像（Alternate Image），实现在 Gainmap 与纯 HDR 格式之间的转换。
