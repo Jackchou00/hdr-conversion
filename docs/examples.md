@@ -129,3 +129,27 @@ gainmap_data = convert.hdr_to_gainmap(
 # Write ISO 21496-1
 io.write_21496(gainmap_data, "output_gainmap.jpg")
 ```
+
+## iOS HDR Screenshot → UltraHDR
+
+Convert iOS HDR screenshots (HEIC with tile-based HEVC) to UltraHDR:
+
+!!! note "External Dependencies"
+    Requires `MP4Box` (GPAC) and `ffmpeg`. Install on macOS: `brew install gpac ffmpeg`
+
+```python
+from hdrconv.io import read_ios_hdr_screenshot, write_ultrahdr
+
+# Read iOS HDR screenshot
+gainmap_image = read_ios_hdr_screenshot("screenshot.HEIC")
+
+# Load and embed Display P3 ICC profile
+with open("icc/Display P3.icc", "rb") as f:
+    p3_icc = f.read()
+
+gainmap_image["baseline_icc"] = p3_icc
+gainmap_image["gainmap_icc"] = p3_icc
+
+# Write directly as UltraHDR (no conversion needed)
+write_ultrahdr(gainmap_image, "output_uhdr.jpg")
+```

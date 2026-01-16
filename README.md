@@ -46,6 +46,8 @@ For UltraHDR and Adaptive Gainmap formats, supports structured extraction of:
 
 For pure PQ/HLG formats, supports extraction of image data and related metadata.
 
+Add experimental support for iOS 26 HDR screenshot parsing.
+
 ### Writing
 
 Writes image data and structured metadata into corresponding formats.

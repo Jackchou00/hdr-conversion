@@ -12,6 +12,7 @@ This library enables research and experimentation with HDR formats:
 - **ISO 21496-1** - Adaptive gainmap standard
 - **ISO 22028-5** - Pure PQ/HLG formats
 - **Apple HEIC** - iOS HDR format
+- **iOS HDR Screenshot** - iOS screenshot HEIC with tile-based encoding
 
 ## Quick Start
 
@@ -61,6 +62,7 @@ Reading and writing functions:
 - `read_ultrahdr()` / `write_ultrahdr()`
 - `read_22028_pq()` / `write_22028_pq()`
 - `read_apple_heic()`
+- `read_ios_hdr_screenshot()`
 
 ### Identification (`hdrconv.identify`)
 

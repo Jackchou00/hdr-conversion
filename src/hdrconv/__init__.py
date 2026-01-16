@@ -6,7 +6,7 @@ Public usage is via submodules (two-level imports), e.g.:
     - ``hdrconv.core.GainmapImage``
 """
 
-__version__ = "0.1.1"
+__version__ = "0.1.2"
 
 from . import convert, core, identify, io
 
