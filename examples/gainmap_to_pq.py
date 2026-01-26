@@ -22,6 +22,10 @@ if gainmap_data["baseline_icc"] is not None:
     with open("baseline.icc", "wb") as f:
         f.write(gainmap_data["baseline_icc"])
 
+if gainmap_data["gainmap_icc"] is not None:
+    with open("gainmap.icc", "wb") as f:
+        f.write(gainmap_data["gainmap_icc"])
+
 # Step 2: Convert Gainmap to linear HDR
 print("\nConverting Gainmap to linear HDR...")
 hdr = convert.gainmap_to_hdr(

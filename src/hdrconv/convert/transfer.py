@@ -30,25 +30,25 @@ with warnings.catch_warnings():
 def apply_pq(linear_rgb: np.ndarray) -> np.ndarray:
     """Apply PQ (Perceptual Quantizer) transfer function.
 
-        Encodes linear light RGB values to PQ (SMPTE ST 2084) transfer function
-        as specified in ITU-R BT.2100 for HDR content.
+    Encodes linear light RGB values to PQ (SMPTE ST 2084) transfer function
+    as specified in ITU-R BT.2100 for HDR content.
 
-        Args:
-            linear_rgb: Linear RGB data, float32, shape (H, W, 3).
-                Values should be normalized where 1.0 = 203 nits (reference white).
-                Values above 1.0 represent HDR highlights up to ~49x (10000 nits).
+    Args:
+        linear_rgb: Linear RGB data, float32, shape (H, W, 3).
+            Values should be normalized where 1.0 = 203 nits (reference white).
+            Values above 1.0 represent HDR highlights up to ~49x (10000 nits).
 
-        Returns:
-            PQ-encoded data, float32, shape (H, W, 3), range [0, 1].
-            Output is clipped to valid PQ range.
+    Returns:
+        PQ-encoded data, float32, shape (H, W, 3), range [0, 1].
+        Output is clipped to valid PQ range.
 
-        Note:
-            Uses 203 nits as reference white (PQ specification).
-            Linear value of 1.0 maps to ~58% in PQ code values.
+    Note:
+        Uses 203 nits as reference white (PQ specification).
+        Linear value of 1.0 maps to ~58% in PQ code values.
 
-        See Also:
-            - `inverse_pq`: Decode PQ back to linear light.
-            - `write_22028_pq`: Write PQ-encoded data to AVIF file.
+    See Also:
+        - `inverse_pq`: Decode PQ back to linear light.
+        - `write_22028_pq`: Write PQ-encoded data to AVIF file.
     """
     # Normalize to reference white (203 nits in PQ)
     pq_encoded = colour.models.eotf_inverse_BT2100_PQ(linear_rgb * 203.0)
@@ -59,25 +59,25 @@ def apply_pq(linear_rgb: np.ndarray) -> np.ndarray:
 def inverse_pq(pq_encoded: np.ndarray) -> np.ndarray:
     """Decode PQ-encoded values to linear light RGB.
 
-        Applies the inverse PQ (SMPTE ST 2084) EOTF to convert PQ-encoded
-        values back to linear light as specified in ITU-R BT.2100.
+    Applies the inverse PQ (SMPTE ST 2084) EOTF to convert PQ-encoded
+    values back to linear light as specified in ITU-R BT.2100.
 
-        Args:
-            pq_encoded: PQ-encoded data, float32, shape (H, W, 3), range [0, 1].
-                Values represent 0-10000 nits in PQ perceptual scale.
+    Args:
+        pq_encoded: PQ-encoded data, float32, shape (H, W, 3), range [0, 1].
+            Values represent 0-10000 nits in PQ perceptual scale.
 
-        Returns:
-            Linear RGB data, float32, shape (H, W, 3).
-            Normalized where 1.0 = 203 nits (reference white).
-            HDR highlights may exceed 1.0 up to ~49x.
+    Returns:
+        Linear RGB data, float32, shape (H, W, 3).
+        Normalized where 1.0 = 203 nits (reference white).
+        HDR highlights may exceed 1.0 up to ~49x.
 
-        Note:
-            Uses 203 nits as reference white (PQ specification).
-            PQ code value of ~0.58 maps to linear 1.0.
+    Note:
+        Uses 203 nits as reference white (PQ specification).
+        PQ code value of ~0.58 maps to linear 1.0.
 
-        See Also:
-            - `apply_pq`: Encode linear light to PQ.
-            - `read_22028_pq`: Read PQ-encoded AVIF file.
+    See Also:
+        - `apply_pq`: Encode linear light to PQ.
+        - `read_22028_pq`: Read PQ-encoded AVIF file.
     """
     linear_normalized = colour.models.eotf_BT2100_PQ(pq_encoded)
     linear_rgb = linear_normalized / 203.0

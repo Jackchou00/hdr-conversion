@@ -1,7 +1,7 @@
 """ISO 22028-5 PQ/HLG AVIF I/O operations.
 
 This module provides functions for reading and writing ISO 22028-5 compliant
-HDR AVIF files using Perceptual Quantizer (PQ) transfer function.
+HDR AVIF files.
 
 ISO 22028-5 specifies encoding of HDR images using HEIF/AVIF container
 with BT.2100 transfer characteristics (PQ or HLG).
@@ -9,9 +9,6 @@ with BT.2100 transfer characteristics (PQ or HLG).
 Public APIs:
     - `read_22028_pq`: Read PQ AVIF to HDRImage
     - `write_22028_pq`: Write HDRImage to PQ AVIF
-
-Note:
-    Requires imagecodecs library with AVIF support (libavif).
 """
 
 from hdrconv.core import HDRImage
@@ -23,27 +20,27 @@ import numpy as np
 def read_22028_pq(filepath: str) -> HDRImage:
     """Read ISO 22028-5 PQ AVIF file.
 
-        Decodes an AVIF file encoded with Perceptual Quantizer (PQ) transfer
-        function as specified in ISO 22028-5 and SMPTE ST 2084.
+    Decodes an AVIF file encoded with Perceptual Quantizer (PQ) transfer
+    function as specified in ISO 22028-5 and SMPTE ST 2084.
 
-        Args:
-            filepath: Path to the PQ AVIF file.
+    Args:
+        filepath: Path to the PQ AVIF file.
 
-        Returns:
-            HDRImage dict containing:
-            - ``data`` (np.ndarray): PQ-encoded array, float32, shape (H, W, 3),
-                range [0, 1] representing 0-10000 nits.
-            - ``color_space`` (str): Color primaries, typically 'bt2020'.
-            - ``transfer_function`` (str): Always 'pq'.
-            - ``icc_profile`` (bytes | None): Currently None (not extracted).
+    Returns:
+        HDRImage dict containing:
+        - ``data`` (np.ndarray): PQ-encoded array, float32, shape (H, W, 3),
+            range [0, 1] representing 0-10000 nits.
+        - ``color_space`` (str): Color primaries, typically 'bt2020'.
+        - ``transfer_function`` (str): Always 'pq'.
+        - ``icc_profile`` (bytes | None): Currently None (not extracted).
 
-        Note:
-            Currently assumes BT.2020 color primaries and 10-bit decode range.
-            Future versions may extract actual color metadata from AVIF.
+    Note:
+        Currently assumes BT.2020 color primaries and 10-bit decode range.
+        Future versions may extract actual color metadata from AVIF.
 
-        See Also:
-            - `write_22028_pq`: Write HDR image to PQ AVIF format.
-            - `inverse_pq`: Convert PQ-encoded data to linear light.
+    See Also:
+        - `write_22028_pq`: Write HDR image to PQ AVIF format.
+        - `inverse_pq`: Convert PQ-encoded data to linear light.
     """
     with open(filepath, "rb") as f:
         avif_bytes = f.read()
@@ -64,23 +61,23 @@ def read_22028_pq(filepath: str) -> HDRImage:
 def write_22028_pq(data: HDRImage, filepath: str) -> None:
     """Write ISO 22028-5 PQ AVIF file.
 
-        Encodes an HDR image to AVIF format with Perceptual Quantizer (PQ)
-        transfer function as specified in ISO 22028-5 and SMPTE ST 2084.
+    Encodes an HDR image to AVIF format with Perceptual Quantizer (PQ)
+    transfer function as specified in ISO 22028-5 and SMPTE ST 2084.
 
-        Args:
-            data: HDRImage dict with PQ-encoded data. Must contain:
-                - ``data``: float32 array, shape (H, W, 3), range [0, 1].
-                - ``color_space``: Color primaries ('bt709', 'p3', 'bt2020').
-                - ``transfer_function``: Transfer function ('pq', 'hlg', etc.).
-            filepath: Output path for the AVIF file.
+    Args:
+        data: HDRImage dict with PQ-encoded data. Must contain:
+            - ``data``: float32 array, shape (H, W, 3), range [0, 1].
+            - ``color_space``: Color primaries ('bt709', 'p3', 'bt2020').
+            - ``transfer_function``: Transfer function ('pq', 'hlg', etc.).
+        filepath: Output path for the AVIF file.
 
-        Note:
-            Output is encoded at 10-bit depth with quality level 90.
-            Color primaries and transfer characteristics are embedded in AVIF metadata.
+    Note:
+        Output is encoded at 10-bit depth with quality level 90.
+        Color primaries and transfer characteristics are embedded in AVIF metadata.
 
-        See Also:
-            - `read_22028_pq`: Read PQ AVIF file.
-            - `apply_pq`: Convert linear HDR to PQ-encoded values.
+    See Also:
+        - `read_22028_pq`: Read PQ AVIF file.
+        - `apply_pq`: Convert linear HDR to PQ-encoded values.
     """
     # Map color primaries to numeric codes
     primaries_map = {"bt709": 1, "bt2020": 9, "p3": 12}

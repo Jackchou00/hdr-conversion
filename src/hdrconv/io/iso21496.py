@@ -694,29 +694,29 @@ def read_21496(filepath: str) -> GainmapImage:
 def write_21496(data: GainmapImage, filepath: str) -> None:
     """Write ISO 21496-1 Gainmap JPEG file.
 
-        Creates a JPEG file with ISO 21496-1 compliant gainmap structure using
-        Multi-Picture Format (MPF) container.
+    Creates a JPEG file with ISO 21496-1 compliant gainmap structure using
+    Multi-Picture Format (MPF) container.
 
-        Args:
-            data: GainmapImage dict containing:
-                - ``baseline``: SDR image, uint8, shape (H, W, 3).
-                - ``gainmap``: Gain map, uint8, shape (H, W, 3) or (H, W, 1).
-                - ``metadata``: GainmapMetadata with transformation parameters.
-                - ``baseline_icc``: Optional ICC profile for baseline.
-                - ``gainmap_icc``: Optional ICC profile for gainmap.
-            filepath: Output path for the JPEG file.
+    Args:
+        data: GainmapImage dict containing:
+            - ``baseline``: SDR image, uint8, shape (H, W, 3).
+            - ``gainmap``: Gain map, uint8, shape (H, W, 3) or (H, W, 1).
+            - ``metadata``: GainmapMetadata with transformation parameters.
+            - ``baseline_icc``: Optional ICC profile for baseline.
+            - ``gainmap_icc``: Optional ICC profile for gainmap.
+        filepath: Output path for the JPEG file.
 
-        Raises:
-            RuntimeError: If file writing fails.
+    Raises:
+        RuntimeError: If file writing fails.
 
-        Note:
-            The output file structure places the baseline image first with an
-            MPF index, followed by the gainmap with ISO 21496-1 metadata.
-            JPEG quality is set to 95 with 4:4:4 chroma subsampling.
+    Note:
+        The output file structure places the baseline image first with an
+        MPF index, followed by the gainmap with ISO 21496-1 metadata.
+        JPEG quality is set to 95 with 4:4:4 chroma subsampling.
 
-        See Also:
-            - `read_21496`: Read ISO 21496-1 Gainmap JPEG.
-            - `hdr_to_gainmap`: Convert HDR image to GainmapImage.
+    See Also:
+        - `read_21496`: Read ISO 21496-1 Gainmap JPEG.
+        - `hdr_to_gainmap`: Convert HDR image to GainmapImage.
     """
     try:
         # 1. 编码 Gainmap 图像 (基础 JPEG 编码)

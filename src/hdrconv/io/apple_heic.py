@@ -156,28 +156,28 @@ def get_headroom(file_path: str | Path, use_makernote: bool = False) -> float:
 def read_apple_heic(filepath: str) -> AppleHeicData:
     """Read Apple HEIC HDR file with gain map.
 
-        Extracts the base SDR image, HDR gain map, and headroom metadata from
-        iPhone HEIC photos containing Apple's proprietary HDR format.
+    Extracts the base SDR image, HDR gain map, and headroom metadata from
+    iPhone HEIC photos containing Apple's proprietary HDR format.
 
-        Args:
-            filepath: Path to the Apple HEIC file.
+    Args:
+        filepath: Path to the Apple HEIC file.
 
-        Returns:
-            AppleHeicData dict containing:
-            - ``base`` (np.ndarray): SDR image, uint8, shape (H, W, 3), Display P3.
-            - ``gainmap`` (np.ndarray): Gain map, uint8, shape (H, W, 1), 1/4 resolution.
-            - ``headroom`` (float): Peak luminance headroom, typically 2.0-8.0.
+    Returns:
+        AppleHeicData dict containing:
+        - ``base`` (np.ndarray): SDR image, uint8, shape (H, W, 3), Display P3.
+        - ``gainmap`` (np.ndarray): Gain map, uint8, shape (H, W, 1), 1/4 resolution.
+        - ``headroom`` (float): Peak luminance headroom, typically 2.0-8.0.
 
-        Raises:
-            ValueError: If base image, gainmap, or headroom cannot be extracted.
-            
-        Note:
-            Requires exiftool to be installed and accessible in PATH for
-            headroom extraction from EXIF/MakerNotes metadata.
+    Raises:
+        ValueError: If base image, gainmap, or headroom cannot be extracted.
 
-        See Also:
-            - `apple_heic_to_hdr`: Convert AppleHeicData to linear HDR.
-            - `has_gain_map`: Check if HEIC file contains gain map.
+    Note:
+        Requires exiftool to be installed and accessible in PATH for
+        headroom extraction from EXIF/MakerNotes metadata.
+
+    See Also:
+        - `apple_heic_to_hdr`: Convert AppleHeicData to linear HDR.
+        - `has_gain_map`: Check if HEIC file contains gain map.
     """
 
     base, gainmap = read_base_and_gain_map(filepath)

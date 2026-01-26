@@ -27,7 +27,6 @@ import shutil
 import struct
 import subprocess
 import tempfile
-from pathlib import Path
 from typing import Optional, Tuple
 
 import numpy as np
@@ -39,7 +38,7 @@ from hdrconv.core import GainmapImage, GainmapMetadata
 
 def _check_dependencies() -> Tuple[bool, list[str]]:
     """Check if required external tools are available.
-    
+
     Returns:
         Tuple of (all_available, missing_tools_list)
     """
@@ -53,7 +52,7 @@ def _check_dependencies() -> Tuple[bool, list[str]]:
 
 def _get_original_resolution(filepath: str) -> Tuple[int, int]:
     """Get the original image resolution from HEIC metadata using pillow_heif.
-    
+
     Returns:
         Tuple of (width, height) representing the actual image dimensions.
     """
@@ -199,7 +198,7 @@ def _dump_tmap_bytes(file_path: str, temp_dir: str) -> Optional[bytes]:
 
 def _parse_gainmapmax_offset_from_tmap(tmap_data: bytes) -> Tuple[float, float]:
     """Parse gainmapmax and offset from tmap data.
-    
+
     The tmap format stores:
     - gainmapmax: at u16 indices 7,8,9
     - offset_1: at u16 indices 23,24,25
@@ -218,13 +217,13 @@ def _detect_grid_parameters(
     tile_count: int, first_tile_path: str
 ) -> Tuple[int, int, int]:
     """Auto-detect grid layout and tile size from the first tile.
-    
+
     Returns:
         Tuple of (grid_cols, grid_rows, tile_size)
     """
     first_tile = Image.open(first_tile_path)
     tile_size = first_tile.width  # Assume square tiles
-    
+
     # Common iOS grid layouts based on tile count
     if tile_count == 15:
         return 3, 5, tile_size
@@ -235,6 +234,7 @@ def _detect_grid_parameters(
     else:
         # Try to find the best fit
         import math
+
         sqrt_n = int(math.sqrt(tile_count))
         for cols in range(sqrt_n, 0, -1):
             if tile_count % cols == 0:
@@ -280,7 +280,7 @@ def read_ios_hdr_screenshot(
 
     Note:
         Requires MP4Box (from GPAC) and ffmpeg to be installed and available in PATH.
-        
+
         The gainmap_min is always 0 and gainmap_gamma is always 1 for iOS HDR screenshots.
         Both baseline_offset and alternate_offset are set to the same value extracted
         from the tmap metadata.
@@ -301,7 +301,7 @@ def read_ios_hdr_screenshot(
 
     # Create temp directory for processing
     temp_dir = tempfile.mkdtemp(prefix="ios_hdr_")
-    
+
     try:
         # Get all hvc1 IDs
         all_ids = _get_hvc1_ids(filepath)
@@ -325,7 +325,7 @@ def read_ios_hdr_screenshot(
             first_id = main_ids[0]
             raw_path = os.path.join(temp_dir, f"{first_id}.hvc")
             jpg_path = os.path.join(temp_dir, "first_tile.jpg")
-            
+
             param = f"{first_id}:path={raw_path}"
             subprocess.run(
                 ["MP4Box", "-dump-item", param, filepath],
@@ -337,14 +337,14 @@ def read_ios_hdr_screenshot(
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL,
             )
-            
+
             detected_cols, detected_rows, detected_tile_size = _detect_grid_parameters(
                 len(main_ids), jpg_path
             )
             grid_cols = grid_cols or detected_cols
             grid_rows = grid_rows or detected_rows
             tile_size = detected_tile_size
-            
+
             # Clean up detection files
             if os.path.exists(raw_path):
                 os.remove(raw_path)
@@ -356,30 +356,40 @@ def read_ios_hdr_screenshot(
             orig_width, orig_height = _get_original_resolution(filepath)
             real_width = real_width or orig_width
             real_height = real_height or orig_height
-        
+
         # Process main image
         main_temp = os.path.join(temp_dir, "main")
         os.makedirs(main_temp, exist_ok=True)
         main_image = _process_tile_group(
-            main_ids, filepath, main_temp,
-            grid_cols, grid_rows, tile_size,
-            real_width or canvas_w, real_height or canvas_h,
+            main_ids,
+            filepath,
+            main_temp,
+            grid_cols,
+            grid_rows,
+            tile_size,
+            real_width or canvas_w,
+            real_height or canvas_h,
         )
 
         # Process gainmap
         gainmap_temp = os.path.join(temp_dir, "gainmap")
         os.makedirs(gainmap_temp, exist_ok=True)
         gainmap_image = _process_tile_group(
-            gainmap_ids, filepath, gainmap_temp,
-            grid_cols, grid_rows, tile_size,
-            real_width or canvas_w, real_height or canvas_h,
+            gainmap_ids,
+            filepath,
+            gainmap_temp,
+            grid_cols,
+            grid_rows,
+            tile_size,
+            real_width or canvas_w,
+            real_height or canvas_h,
         )
 
         # Parse tmap metadata
         tmap_data = _dump_tmap_bytes(filepath, temp_dir)
         if tmap_data is None:
             raise ValueError("No tmap metadata found in file")
-        
+
         gainmapmax, offset = _parse_gainmapmax_offset_from_tmap(tmap_data)
 
         # Construct GainmapMetadata
@@ -388,7 +398,7 @@ def read_ios_hdr_screenshot(
             minimum_version=0,
             writer_version=0,
             baseline_hdr_headroom=1.0,
-            alternate_hdr_headroom=float(2 ** gainmapmax),
+            alternate_hdr_headroom=float(2**gainmapmax),
             is_multichannel=True,
             use_base_colour_space=True,
             gainmap_min=(0.0, 0.0, 0.0),

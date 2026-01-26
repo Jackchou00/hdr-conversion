@@ -32,30 +32,30 @@ def convert_color_space(
 ) -> np.ndarray:
     """Convert image between color spaces.
 
-        Transforms RGB values from one color space to another using chromatic
-        adaptation and matrix transformations. Input must be in linear light.
+    Transforms RGB values from one color space to another using chromatic
+    adaptation and matrix transformations. Input must be in linear light.
 
-        Args:
-            image: Linear RGB image data, float32, shape (H, W, 3).
-                Values should be in linear light (not gamma-encoded).
-            source_space: Source color space identifier.
-                Options: 'bt709' (Rec. 709), 'p3' (Display P3), 'bt2020' (Rec. 2020).
-            target_space: Target color space identifier.
-                Options: 'bt709', 'p3', 'bt2020'.
-            clip: Whether to clip output to [0, inf). Default: False.
-                Enable when negative values from gamut mapping are undesirable.
+    Args:
+        image: Linear RGB image data, float32, shape (H, W, 3).
+            Values should be in linear light (not gamma-encoded).
+        source_space: Source color space identifier.
+            Options: 'bt709' (Rec. 709), 'p3' (Display P3), 'bt2020' (Rec. 2020).
+        target_space: Target color space identifier.
+            Options: 'bt709', 'p3', 'bt2020'.
+        clip: Whether to clip output to [0, inf). Default: False.
+            Enable when negative values from gamut mapping are undesirable.
 
-        Returns:
-            Converted image in target color space, same shape as input.
-            Values remain in linear light.
+    Returns:
+        Converted image in target color space, same shape as input.
+        Values remain in linear light.
 
-        Note:
-            If source_space equals target_space, returns input unchanged.
-            Uses colour-science library for accurate color transformations.
+    Note:
+        If source_space equals target_space, returns input unchanged.
+        Uses colour-science library for accurate color transformations.
 
-        See Also:
-            - `apply_pq`: Apply PQ transfer function after color space conversion.
-            - `gainmap_to_hdr`: Includes color space conversion in HDR reconstruction.
+    See Also:
+        - `apply_pq`: Apply PQ transfer function after color space conversion.
+        - `gainmap_to_hdr`: Includes color space conversion in HDR reconstruction.
     """
     space_map = {"bt709": "ITU-R BT.709", "p3": "DCI-P3", "bt2020": "ITU-R BT.2020"}
 

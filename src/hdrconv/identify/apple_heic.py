@@ -20,21 +20,21 @@ HDR_GAIN_MAP_URN = "urn:com:apple:photo:2020:aux:hdrgainmap"
 def has_gain_map(input_path: str) -> bool:
     """Check if Apple HEIC file contains HDR gain map.
 
-        Scans the auxiliary images in a HEIC file to detect the presence of
-        Apple's HDR gain map (URN: urn:com:apple:photo:2020:aux:hdrgainmap).
+    Scans the auxiliary images in a HEIC file to detect the presence of
+    Apple's HDR gain map (URN: urn:com:apple:photo:2020:aux:hdrgainmap).
 
-        Args:
-            input_path: Path to the input HEIC image file.
+    Args:
+        input_path: Path to the input HEIC image file.
 
-        Returns:
-            True if an HDR gain map auxiliary image is found, False otherwise.
+    Returns:
+        True if an HDR gain map auxiliary image is found, False otherwise.
 
-        Note:
-            This function does not validate the gain map data itself, only
-            checks for its presence in the file metadata.
+    Note:
+        This function does not validate the gain map data itself, only
+        checks for its presence in the file metadata.
 
-        See Also:
-            - `read_apple_heic`: Extract gain map data from HEIC file.
+    See Also:
+        - `read_apple_heic`: Extract gain map data from HEIC file.
     """
     has_gain_map = False
     heif_file = pillow_heif.read_heif(input_path, convert_hdr_to_8bit=False)
