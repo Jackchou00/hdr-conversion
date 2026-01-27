@@ -14,6 +14,7 @@ Note:
     Requires exiftool to be installed for headroom metadata extraction.
 """
 
+import shutil
 import pillow_heif
 import numpy as np
 from PIL import Image
@@ -122,15 +123,51 @@ Original code: https://github.com/johncf/apple-hdr-heic/blob/master/src/apple_hd
 """
 
 
+def _check_exiftool_installed() -> None:
+    """Check if exiftool is installed and accessible.
+
+    Raises:
+        RuntimeError: If exiftool is not found in PATH.
+    """
+    if shutil.which("exiftool") is None:
+        raise RuntimeError(
+            "exiftool is not installed or not found in PATH. "
+            "Please install exiftool:\n"
+            "  - macOS: brew install exiftool\n"
+            "  - Ubuntu/Debian: sudo apt-get install libimage-exiftool-perl\n"
+            "  - Windows: Download from https://exiftool.org/"
+        )
+
+
 def get_headroom(file_path: str | Path, use_makernote: bool = False) -> float:
+    """Extract HDR headroom from Apple HEIC metadata.
+
+    Args:
+        file_path: Path to the HEIC file.
+        use_makernote: If True, prefer MakerNotes over XMP metadata.
+
+    Returns:
+        HDR headroom value (peak luminance ratio).
+
+    Raises:
+        RuntimeError: If exiftool is not installed.
+    """
+    _check_exiftool_installed()
+
     target_tags = [
         "XMP:HDRGainMapHeadroom",
         "MakerNotes:HDRHeadroom",  #  maker33
         "MakerNotes:HDRGain",  #  maker48
     ]
 
-    with ExifToolHelper() as et:
-        metadata = et.get_tags(file_path, tags=target_tags)[0]
+    try:
+        with ExifToolHelper() as et:
+            metadata = et.get_tags(file_path, tags=target_tags)[0]
+    except FileNotFoundError as e:
+        raise RuntimeError(
+            "exiftool executable not found. Please ensure exiftool is installed "
+            "and accessible in your PATH."
+        ) from e
 
     if "XMP:HDRGainMapHeadroom" in metadata and not use_makernote:
         return float(metadata["XMP:HDRGainMapHeadroom"])

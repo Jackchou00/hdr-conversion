@@ -2,9 +2,7 @@
 
 [简体中文](README-zhCN.md) | [English](README.md)
 
-> 注意：处于开发阶段，API 可能会频繁变动。目前，颜色转换可能不正确。
->
-> 注意：PyExifTool 需要系统路径中有 exiftool 可执行文件，详见 [https://exiftool.org/](https://exiftool.org/) 。否则读取 Apple HEIC 时会无提示的卡住，请使用 `exiftool -ver` 检查是否有效安装，下个版本将会修复此问题。
+> **重要提示**：处于开发阶段，API 可能会频繁变动。目前，颜色转换可能不正确。该项目仍处于非常早期的阶段，遇到任何问题都烦请提交 issue 或直接联系作者。
 
 API 参考文档: [https://jackchou00.github.io/hdr-conversion](https://jackchou00.github.io/hdr-conversion/)
 

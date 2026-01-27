@@ -1,8 +1,6 @@
 # HDR Conversion
 
-> **Note**: This project is in alpha stage. APIs may change frequently, and color conversion may have inaccuracies.
->
-> **Note**: PyExifTool requires the exiftool executable in the system path, see [https://exiftool.org/](https://exiftool.org/) . Otherwise, reading Apple HEIC may hang without prompt. Please use `exiftool -ver` to check if it is installed correctly. This issue will be fixed in the next version.
+> **Important Note**: In alpha stage, API may change frequently. Currently, color conversion may be incorrect. This project is still in a very early stage, please submit issues or contact the author directly if you encounter any problems.
 
 This project provides Python-based tools for parsing, writing, and converting between various HDR image formats.
 
