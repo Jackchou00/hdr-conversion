@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+    <url>
+         <loc>https://jackchou00.github.io/hdr-conversion/</loc>
+         <lastmod>2026-01-27</lastmod>
+    </url>
+    <url>
+         <loc>https://jackchou00.github.io/hdr-conversion/examples/</loc>
+         <lastmod>2026-01-27</lastmod>
+    </url>
+    <url>
+         <loc>https://jackchou00.github.io/hdr-conversion/api/</loc>
+         <lastmod>2026-01-27</lastmod>
+    </url>
+    <url>
+         <loc>https://jackchou00.github.io/hdr-conversion/api/convert/</loc>
+         <lastmod>2026-01-27</lastmod>
+    </url>
+    <url>
+         <loc>https://jackchou00.github.io/hdr-conversion/api/core/</loc>
+         <lastmod>2026-01-27</lastmod>
+    </url>
+    <url>
+         <loc>https://jackchou00.github.io/hdr-conversion/api/identify/</loc>
+         <lastmod>2026-01-27</lastmod>
+    </url>
+    <url>
+         <loc>https://jackchou00.github.io/hdr-conversion/api/io/</loc>
+         <lastmod>2026-01-27</lastmod>
+    </url>
+</urlset>
