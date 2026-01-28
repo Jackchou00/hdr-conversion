@@ -509,15 +509,15 @@ def _build_mpf_payload(
     entries = bytearray()
 
     # Entry 0: Primary Image
-    # Attribute: 0x030000 (Baseline MP Primary Image)
-    entries.extend(struct.pack(">I", 0x030000))
+    # Attribute: 0x00030000 (Primary Image - CIPA DC-007 standard)
+    entries.extend(struct.pack(">I", 0x00030000))
     entries.extend(struct.pack(">I", primary_size))
     entries.extend(struct.pack(">I", 0))  # Offset 0 (本身)
     entries.extend(struct.pack(">I", 0))  # Dep entries (0)
 
     # Entry 1: Gainmap Image
-    # Attribute: 0x050000 (Large Thumbnail / Undefined / Gainmap role)
-    entries.extend(struct.pack(">I", 0x050000))
+    # Attribute: 0x00050000 (Gainmap - CIPA DC-007 standard)
+    entries.extend(struct.pack(">I", 0x00050000))
     entries.extend(struct.pack(">I", gainmap_size))
     entries.extend(struct.pack(">I", gainmap_offset))
     entries.extend(struct.pack(">I", 0))
