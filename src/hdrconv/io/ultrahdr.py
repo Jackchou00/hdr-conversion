@@ -197,8 +197,11 @@ def _build_hdrgm_xmp(metadata: GainmapMetadata) -> bytes:
     baseline_offset = metadata.get("baseline_offset", (0.0, 0.0, 0.0))
     alternate_offset = metadata.get("alternate_offset", (0.0, 0.0, 0.0))
 
-    capacity_min = float(np.min(gainmap_min))
-    capacity_max = float(np.max(gainmap_max))
+    baseline_headroom = metadata.get("baseline_hdr_headroom", 0.0)
+    alternate_headroom = metadata.get("alternate_hdr_headroom", 1.0)
+
+    capacity_min = float(max(baseline_headroom, 1e-12))
+    capacity_max = float(max(alternate_headroom, 1e-12))
 
     attrs = {
         "Version": "1.0",
