@@ -43,12 +43,12 @@ class GainmapMetadata(TypedDict, total=False):
     is_multichannel: bool
     use_base_colour_space: bool
 
-    # Gainmap transformation parameters (RGB triplets)
+    # Gainmap transformation parameters
     gainmap_min: Tuple[float, float, float]
     gainmap_max: Tuple[float, float, float]
     gainmap_gamma: Tuple[float, float, float]
 
-    # Offset parameters (RGB triplets)
+    # Offset parameters
     baseline_offset: Tuple[float, float, float]
     alternate_offset: Tuple[float, float, float]
 

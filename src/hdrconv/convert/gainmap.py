@@ -241,7 +241,7 @@ def hdr_to_gainmap(
     metadata = GainmapMetadata(
         minimum_version=0,
         writer_version=0,
-        baseline_hdr_headroom=1.0,
+        baseline_hdr_headroom=0.0,
         alternate_hdr_headroom=float(alt_headroom),
         is_multichannel=True,
         use_base_colour_space=True,

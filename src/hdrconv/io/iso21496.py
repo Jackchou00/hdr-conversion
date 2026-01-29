@@ -599,6 +599,52 @@ def _build_mpf_minimal_payload(num_images: int) -> bytes:
     return bytes(payload)
 
 
+def _calculate_mpf_offsets(
+    primary_bytes_raw: bytes,
+    primary_stub_segment: bytes,
+    mpf_segment_temp: bytes,
+) -> tuple[int, int, int]:
+    """计算 MPF 相关的文件偏移量。
+
+    MPF 标准规定偏移量是相对于 MPF Header (即 'MM'/'II' 字节) 的位置。
+    MPF Header 位于 MPF payload 的前 8 个字节。
+
+    文件结构:
+    - Primary JPEG 原始数据
+    - Primary stub segment (APP2)
+    - MPF segment (APP2)
+    - Gainmap JPEG 数据
+
+    Args:
+        primary_bytes_raw: Primary 图像的原始 JPEG 字节
+        primary_stub_segment: Primary 中的 stub APP2 段
+        mpf_segment_temp: MPF APP2 段（用于计算长度）
+
+    Returns:
+        tuple: (mpf_base_file_offset, gainmap_relative_offset, total_primary_len)
+            - mpf_base_file_offset: MPF Header 相对于文件开头的偏移量
+            - gainmap_relative_offset: Gainmap 相对于 MPF Header 的偏移量
+            - total_primary_len: Primary 部分的总长度（包括所有段）
+    """
+    # Primary 部分的总长度（包括 stub 和 MPF 段）
+    total_primary_len = (
+        len(primary_bytes_raw) + len(primary_stub_segment) + len(mpf_segment_temp)
+    )
+
+    # MPF marker 的文件偏移量（SOI 标记 2 字节 + primary_stub_segment）
+    mpf_marker_offset = 2 + len(primary_stub_segment)
+
+    # MPF Header 相对于文件开头的偏移量
+    # MPF marker (2 字节) + segment length (2 字节) + "MPF\0" (4 字节) = 8 字节
+    mpf_base_file_offset = mpf_marker_offset + 8
+
+    # Gainmap 相对于 MPF Header 的偏移量
+    # Gainmap 从 total_primary_len 开始，需要减去 MPF Header 的位置
+    gainmap_relative_offset = total_primary_len - mpf_base_file_offset
+
+    return mpf_base_file_offset, gainmap_relative_offset, total_primary_len
+
+
 # -----------------------------------------------------------------------------
 # Public API
 # -----------------------------------------------------------------------------
@@ -759,20 +805,15 @@ def write_21496(data: GainmapImage, filepath: str) -> None:
         )
         mpf_segment_temp = _build_app2_segment(mpf_payload_temp)
 
-        #    B. 计算最终文件结构中的绝对位置
-        #       Primary_Final_Len = Raw_Primary_Len + Stub_Seg_Len + MPF_Seg_Len
-        total_primary_len = (
-            len(primary_bytes_raw) + len(primary_stub_segment) + len(mpf_segment_temp)
+        #    B. 计算 MPF 相关的文件偏移量
+        #       使用辅助函数计算 MPF Header 位置和 Gainmap 相对偏移量
+        _, gainmap_relative_offset, total_primary_len = _calculate_mpf_offsets(
+            primary_bytes_raw,
+            primary_stub_segment,
+            mpf_segment_temp,
         )
 
-        #    C. 计算 Gainmap 的相对偏移量
-        #       MPF 标准规定偏移量是相对于 MPF Header (即 'MM'/'II' 字节) 的位置
-        #       base_file_offset = MPF marker 的文件偏移 + 8 (marker+len+"MPF\0")
-        mpf_marker_offset = 2 + len(primary_stub_segment)
-        mpf_base_file_offset = mpf_marker_offset + 8
-        gainmap_relative_offset = total_primary_len - mpf_base_file_offset
-
-        #    D. 重新生成包含正确 Primary 大小和 Gainmap 偏移量的 MPF payload
+        #    C. 重新生成包含正确 Primary 大小和 Gainmap 偏移量的 MPF payload
         mpf_payload_final = _build_mpf_payload(
             primary_size=total_primary_len,
             gainmap_size=len(gainmap_final),
