@@ -407,11 +407,12 @@ def format_matrix(mat: Optional[np.ndarray]) -> str:
 
 def main():
     """Run ICC profile inspection and color conversion tests."""
-    icc_files = [
-        Path("icc/Display P3.icc"),
-        Path("icc/baseline.icc"),
-        Path("icc/gainmap.icc"),
-    ]
+    icc_dir = Path("icc")
+    icc_files = sorted(icc_dir.glob("*.icc"))
+    
+    if not icc_files:
+        print("No ICC files found in icc/ directory")
+        return
 
     test_rgb_values = [
         (1.0, 1.0, 1.0),  # White
@@ -475,7 +476,7 @@ def main():
 
         # Show one example conversion
         print("\nExample Conversion (with TRC):")
-        rgb_example = (1.0, 1.0, 1.0)
+        rgb_example = (0.5, 0.5, 0.5)
 
         # Get XYZ in device white space (e.g., D65 for Display P3)
         xyz_device = engine.rgb_to_xyz_matrix(rgb_example, apply_trc_flag=True)
@@ -499,12 +500,6 @@ def main():
         print(
             f"  Round-trip error: {np.abs(np.array(rgb_example) - rgb_result).max():.8f}"
         )
-
-        # Show expected white points
-        if icc_path.name == "Display P3.icc":
-            print("\n  Expected D50 white: [0.96420, 1.00000, 0.82490]")
-            print("  Expected D65 white: [0.95047, 1.00000, 1.08883]")
-
 
 if __name__ == "__main__":
     main()
