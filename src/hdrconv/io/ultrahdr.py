@@ -367,15 +367,17 @@ def read_ultrahdr(filepath: str) -> GainmapImage:
     )
 
 
-def write_ultrahdr(data: GainmapImage, filepath: str) -> None:
+def write_ultrahdr(data: GainmapImage, filepath: str, baseline_quality: int = 95, gainmap_quality: int = 95) -> None:
     """Write UltraHDR JPEG file.
 
     Args:
         data: GainmapImage dict containing baseline, gainmap, and metadata.
         filepath: Output path for the JPEG file.
+        baseline_quality: JPEG quality for baseline image (1-100, default 95).
+        gainmap_quality: JPEG quality for gainmap image (1-100, default 95).
     """
     try:
-        gainmap_bytes_raw = _create_jpeg_bytes(data["gainmap"], data.get("gainmap_icc"))
+        gainmap_bytes_raw = _create_jpeg_bytes(data["gainmap"], data.get("gainmap_icc"), gainmap_quality)
 
         # Insert minimal MPF APP2 in gainmap stream for compatibility
         gainmap_mpf_segment = _build_app2_segment(_build_mpf_minimal_payload(2))
@@ -391,7 +393,7 @@ def write_ultrahdr(data: GainmapImage, filepath: str) -> None:
         )
 
         primary_bytes_raw = _create_jpeg_bytes(
-            data["baseline"], data.get("baseline_icc")
+            data["baseline"], data.get("baseline_icc"), baseline_quality
         )
 
         gcontainer_payload = _build_gcontainer_xmp(len(gainmap_final))

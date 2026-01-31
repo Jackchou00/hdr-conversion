@@ -455,7 +455,7 @@ def _encode_iso21496_metadata(meta: Dict[str, Any]) -> bytes:
 # -----------------------------------------------------------------------------
 
 
-def _create_jpeg_bytes(img_arr: np.ndarray, icc: bytes | None) -> bytes:
+def _create_jpeg_bytes(img_arr: np.ndarray, icc: bytes | None, quality: int = 95) -> bytes:
     """使用 PIL 将 numpy 数组编码为 JPEG 字节流"""
     # 数据类型转换与校验
     if img_arr.dtype != np.uint8:
@@ -475,7 +475,7 @@ def _create_jpeg_bytes(img_arr: np.ndarray, icc: bytes | None) -> bytes:
 
     save_kwargs = {
         "format": "JPEG",
-        "quality": 95,
+        "quality": quality,
         "subsampling": 0,  # 4:4:4 采样以获得更好质量
     }
     if icc:
@@ -737,7 +737,7 @@ def read_21496(filepath: str) -> GainmapImage:
     )
 
 
-def write_21496(data: GainmapImage, filepath: str) -> None:
+def write_21496(data: GainmapImage, filepath: str, baseline_quality: int = 95, gainmap_quality: int = 95) -> None:
     """Write ISO 21496-1 Gainmap JPEG file.
 
     Creates a JPEG file with ISO 21496-1 compliant gainmap structure using
@@ -751,6 +751,8 @@ def write_21496(data: GainmapImage, filepath: str) -> None:
             - ``baseline_icc``: Optional ICC profile for baseline.
             - ``gainmap_icc``: Optional ICC profile for gainmap.
         filepath: Output path for the JPEG file.
+        baseline_quality: JPEG quality for baseline image (1-100, default 95).
+        gainmap_quality: JPEG quality for gainmap image (1-100, default 95).
 
     Raises:
         RuntimeError: If file writing fails.
@@ -766,7 +768,7 @@ def write_21496(data: GainmapImage, filepath: str) -> None:
     """
     try:
         # 1. 编码 Gainmap 图像 (基础 JPEG 编码)
-        gainmap_bytes_raw = _create_jpeg_bytes(data["gainmap"], data.get("gainmap_icc"))
+        gainmap_bytes_raw = _create_jpeg_bytes(data["gainmap"], data.get("gainmap_icc"), gainmap_quality)
 
         # 1.1 在 Gainmap 流中插入一个最小 MPF APP2（兼容性需要）
         gainmap_mpf_segment = _build_app2_segment(_build_mpf_minimal_payload(2))
@@ -786,7 +788,7 @@ def write_21496(data: GainmapImage, filepath: str) -> None:
 
         # 3. 编码 Baseline 图像 (基础 JPEG 编码)
         primary_bytes_raw = _create_jpeg_bytes(
-            data["baseline"], data.get("baseline_icc")
+            data["baseline"], data.get("baseline_icc"), baseline_quality
         )
 
         # 3.1 在 Primary 流中插入一个短 URN stub APP2（兼容性需要）

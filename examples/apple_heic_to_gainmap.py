@@ -48,15 +48,28 @@ print(f"  Baseline shape: {gainmap_data['baseline'].shape}")
 print(f"  Gainmap shape: {gainmap_data['gainmap'].shape}")
 print(f"  Headroom: {gainmap_data['metadata']['alternate_hdr_headroom']:.2f}")
 
-# Step 5: Write ISO 21496-1 JPEG
+# Step 5: Write ISO 21496-1 JPEG with quality control
 print("\nWriting ISO 21496-1 file...")
 io.write_21496(gainmap_data, "output_from_heic_gainmap_iso21496.jpg")
+
+# Step 5.1: Write with custom quality settings
+print("Writing ISO 21496-1 file with custom quality...")
+io.write_21496(
+    gainmap_data,
+    "output_from_heic_gainmap_iso21496_custom_quality.jpg",
+    baseline_quality=50,
+    gainmap_quality=50,
+)
 
 # Step 6: Write UltraHDR JPEG
 print("Writing UltraHDR file...")
 io.write_ultrahdr(gainmap_data, "output_from_heic_gainmap_uhdr.jpg")
 
-print("✓ Conversion complete!")
-print("\nOutputs:")
-print("  - output_from_heic_gainmap_iso21496.jpg")
-print("  - output_from_heic_gainmap_uhdr.jpg")
+# Extra: Modify baseline headroom to demonstrate metadata change
+
+# Overwrite baseline headroom with wrong value = 1.0
+print("original baseline headroom:", gainmap_data["metadata"]["baseline_hdr_headroom"])
+gainmap_data["metadata"]["baseline_hdr_headroom"] = 1.0
+print("modified baseline headroom:", gainmap_data["metadata"]["baseline_hdr_headroom"])
+
+io.write_21496(gainmap_data, "output_from_heic_gainmap_iso21496_baseline_1.jpg")
