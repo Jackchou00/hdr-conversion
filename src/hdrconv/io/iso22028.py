@@ -48,8 +48,7 @@ def read_22028_pq(filepath: str) -> HDRImage:
     # Extract PQ-encoded array (normalized to [0, 1])
     # Currently hard-coded to 10-bit decode range.
     image_array = image_array / 1023.0
-    # TODO: Extract actual color primaries and transfer from AVIF metadata
-    # For now, assume BT.2020 PQ which is most common
+    # BT.2020 PQ is the most common format for HDR AVIF files
     return HDRImage(
         data=image_array,
         color_space="bt2020",

@@ -42,7 +42,6 @@ def has_gain_map(input_path: str) -> bool:
     if "aux" in heif_file.info:
         aux_info = heif_file.info["aux"]
         for urn, ids in aux_info.items():
-            # print(f"  URN: {urn}, IDs: {ids}")
             if urn == HDR_GAIN_MAP_URN:
                 has_gain_map = True
     return has_gain_map

@@ -25,13 +25,13 @@ from exiftool import ExifToolHelper
 from hdrconv.core import AppleHeicData
 
 
-"""
-Extracts main image and gainmap from HEIC files shot by iPhone.
+"""Extract main image and gainmap from iPhone HEIC files.
 
-Modified from: https://github.com/finnschi/heic-shenanigans/blob/main/gain_map_extract.py
+    The gainmap is stored as an auxiliary image at 1/4 resolution.
 
-iPhone's Gainmap is an auxiliary image with 1/4 the resolution of the main image and a single channel.
-"""
+    See Also:
+        - https://github.com/finnschi/heic-shenanigans (reference implementation)
+    """
 
 
 # According to Apple documentation, the URN for the HDR gain map auxiliary image is fixed.
@@ -108,19 +108,15 @@ def read_base_and_gain_map(input_path: str) -> Tuple[np.ndarray, Optional[np.nda
     return base_image_np, gain_map_np
 
 
-"""
-Apple uses headroom, instead of GainMap Min and Max.
+"""Extract HDR headroom value from Apple HEIC metadata.
 
-Reference: https://developer.apple.com/documentation/appkit/applying-apple-hdr-effect-to-your-photos
+    Apple uses headroom instead of GainMap Min and Max.
+    Formula: hdr_rgb = sdr_rgb * (1.0 + (headroom - 1.0) * gainmap)
 
-e.g. hdr_rgb = sdr_rgb * (1.0 + (headroom - 1.0) * gainmap)
-
-rgb and gainmap here all in linear space, gainmap defaultly use a Rec.709 transfer function.
-
-Code below shows how to extract the "headroom" from a file's EXIF part.
-
-Original code: https://github.com/johncf/apple-hdr-heic/blob/master/src/apple_hdr_heic/metadata.py
-"""
+    See Also:
+        - https://developer.apple.com/documentation/appkit/applying-apple-hdr-effect-to-your-photos
+        - https://github.com/johncf/apple-hdr-heic (metadata extraction reference)
+    """
 
 
 def _check_exiftool_installed() -> None:
@@ -156,8 +152,8 @@ def get_headroom(file_path: str | Path, use_makernote: bool = False) -> float:
 
     target_tags = [
         "XMP:HDRGainMapHeadroom",
-        "MakerNotes:HDRHeadroom",  #  maker33
-        "MakerNotes:HDRGain",  #  maker48
+        "MakerNotes:HDRHeadroom",
+        "MakerNotes:HDRGain",
     ]
 
     try:

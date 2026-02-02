@@ -456,19 +456,19 @@ def _encode_iso21496_metadata(meta: Dict[str, Any]) -> bytes:
 
 
 def _create_jpeg_bytes(img_arr: np.ndarray, icc: bytes | None, quality: int = 95) -> bytes:
-    """使用 PIL 将 numpy 数组编码为 JPEG 字节流"""
-    # 数据类型转换与校验
+    """Encode numpy array to JPEG bytes using PIL."""
+    # Convert to uint8 if needed
     if img_arr.dtype != np.uint8:
         if np.issubdtype(img_arr.dtype, np.floating):
             img_arr = np.clip(img_arr * 255, 0, 255).astype(np.uint8)
         else:
             img_arr = np.clip(img_arr, 0, 255).astype(np.uint8)
 
-    # 确保是 RGB
+    # Ensure RGB format
     if img_arr.ndim == 2:
         img_arr = np.stack([img_arr] * 3, axis=-1)
     elif img_arr.shape[2] == 4:
-        img_arr = img_arr[:, :, :3]  # 丢弃 Alpha
+        img_arr = img_arr[:, :, :3]  # Drop alpha channel
 
     pil_img = Image.fromarray(img_arr)
     bio = io.BytesIO()
@@ -476,7 +476,7 @@ def _create_jpeg_bytes(img_arr: np.ndarray, icc: bytes | None, quality: int = 95
     save_kwargs = {
         "format": "JPEG",
         "quality": quality,
-        "subsampling": 0,  # 4:4:4 采样以获得更好质量
+        "subsampling": 0,  # 4:4:4 chroma subsampling for best quality
     }
     if icc:
         save_kwargs["icc_profile"] = icc
@@ -486,7 +486,7 @@ def _create_jpeg_bytes(img_arr: np.ndarray, icc: bytes | None, quality: int = 95
 
 
 def _build_app2_segment(payload: bytes) -> bytes:
-    """封装 JPEG APP2 段标记"""
+    """Build JPEG APP2 segment with given payload."""
     # Marker (FF E2) + Length (2 bytes) + Payload
     length = len(payload) + 2
     return b"\xff\xe2" + length.to_bytes(2, "big") + payload
@@ -495,35 +495,28 @@ def _build_app2_segment(payload: bytes) -> bytes:
 def _build_mpf_payload(
     primary_size: int, gainmap_size: int, gainmap_offset: int
 ) -> bytes:
-    """
-    构建 MPF (Multi-Picture Format) 的二进制 Payload。
-    包含2个图像条目：Index 0 (Primary), Index 1 (Gainmap)。
-    """
-    # MPF 签名
+    """Build MPF (Multi-Picture Format) binary payload with 2 image entries."""
+    # MPF signature
     mpf_sig = b"MPF\x00"
-    # Endianness (Big Endian)
+    # Big endian byte order
     byte_order = b"MM"
 
-    # --- 构建 MP Entry List (图像索引表) ---
-    # 每个条目 16 字节: Attribute(4), Size(4), Offset(4), Dependent(2+2)
+    # Build MP Entry List (16 bytes per entry: Attribute, Size, Offset, Dependent)
     entries = bytearray()
 
-    # Entry 0: Primary Image
-    # Attribute: 0x00030000 (Primary Image - CIPA DC-007 standard)
+    # Entry 0: Primary Image (CIPA DC-007 standard attribute 0x00030000)
     entries.extend(struct.pack(">I", 0x00030000))
     entries.extend(struct.pack(">I", primary_size))
-    entries.extend(struct.pack(">I", 0))  # Offset 0 (本身)
-    entries.extend(struct.pack(">I", 0))  # Dep entries (0)
+    entries.extend(struct.pack(">I", 0))  # Offset 0 (self)
+    entries.extend(struct.pack(">I", 0))  # No dependent entries
 
-    # Entry 1: Gainmap Image
-    # Attribute: 0x00050000 (Gainmap - CIPA DC-007 standard)
+    # Entry 1: Gainmap Image (CIPA DC-007 standard attribute 0x00050000)
     entries.extend(struct.pack(">I", 0x00050000))
     entries.extend(struct.pack(">I", gainmap_size))
     entries.extend(struct.pack(">I", gainmap_offset))
     entries.extend(struct.pack(">I", 0))
 
-    # --- 构建 Index IFD ---
-    # 包含3个标签: Version, NumberOfImages, MPEntry
+    # Build Index IFD with 3 tags: Version, NumberOfImages, MPEntry
     num_tags = 3
     ifd = bytearray()
 
@@ -542,33 +535,32 @@ def _build_mpf_payload(
     # Tag 3: MP Entry (0xB002)
     ifd.extend(struct.pack(">H", 0xB002))
     ifd.extend(struct.pack(">H", 7))  # Type: UNDEFINED
-    ifd.extend(struct.pack(">I", 32))  # Count: 16 bytes * 2 entries = 32
-    # Offset to Data:
-    #   Header(8) + IFD_Count(2) + Tags(3*12=36) + NextIFD(4) = 50 字节
+    ifd.extend(struct.pack(">I", 32))  # Count: 32 bytes (2 entries * 16)
+    # Offset to data: Header(8) + Count(2) + Tags(36) + NextIFD(4) = 50 bytes
     ifd.extend(struct.pack(">I", 50))
 
-    # --- 组装所有部分 ---
+    # Assemble all parts
     payload = bytearray()
-    payload.extend(mpf_sig)  # 4 bytes
-    payload.extend(byte_order)  # 2 bytes
-    payload.extend(b"\x00\x2a")  # 2 bytes (0x002A)
-    payload.extend(struct.pack(">I", 8))  # Offset to First IFD (8 bytes from 'MM')
+    payload.extend(mpf_sig)
+    payload.extend(byte_order)
+    payload.extend(b"\x00\x2a")  # TIFF magic number
+    payload.extend(struct.pack(">I", 8))  # Offset to first IFD
 
-    # IFD Block
+    # IFD block
     payload.extend(struct.pack(">H", num_tags))
     payload.extend(ifd)
-    payload.extend(struct.pack(">I", 0))  # Next IFD Offset (0 = None)
+    payload.extend(struct.pack(">I", 0))  # No next IFD
 
-    # Data Area (Entries)
+    # Data area (entries)
     payload.extend(entries)
 
     return bytes(payload)
 
 
 def _build_mpf_minimal_payload(num_images: int) -> bytes:
-    """构建最小 MPF payload（仅包含 Version + NumberOfImages）。
+    """Build minimal MPF payload with Version and NumberOfImages only.
 
-    一些兼容性实现会期望 gainmap 流中也存在一个最小 MPF APP2。
+    Some implementations expect a minimal MPF APP2 in the gainmap stream.
     """
     mpf_sig = b"MPF\x00"
     byte_order = b"MM"
@@ -604,42 +596,41 @@ def _calculate_mpf_offsets(
     primary_stub_segment: bytes,
     mpf_segment_temp: bytes,
 ) -> tuple[int, int, int]:
-    """计算 MPF 相关的文件偏移量。
+    """Calculate MPF-related file offsets.
 
-    MPF 标准规定偏移量是相对于 MPF Header (即 'MM'/'II' 字节) 的位置。
-    MPF Header 位于 MPF payload 的前 8 个字节。
+    MPF standard specifies offsets relative to MPF Header (the 'MM'/'II' bytes).
+    MPF Header is the first 8 bytes of MPF payload.
 
-    文件结构:
-    - Primary JPEG 原始数据
+    File structure:
+    - Primary JPEG raw data
     - Primary stub segment (APP2)
     - MPF segment (APP2)
-    - Gainmap JPEG 数据
+    - Gainmap JPEG data
 
     Args:
-        primary_bytes_raw: Primary 图像的原始 JPEG 字节
-        primary_stub_segment: Primary 中的 stub APP2 段
-        mpf_segment_temp: MPF APP2 段（用于计算长度）
+        primary_bytes_raw: Raw JPEG bytes of primary image
+        primary_stub_segment: Stub APP2 segment in primary
+        mpf_segment_temp: MPF APP2 segment (for length calculation)
 
     Returns:
         tuple: (mpf_base_file_offset, gainmap_relative_offset, total_primary_len)
-            - mpf_base_file_offset: MPF Header 相对于文件开头的偏移量
-            - gainmap_relative_offset: Gainmap 相对于 MPF Header 的偏移量
-            - total_primary_len: Primary 部分的总长度（包括所有段）
+            - mpf_base_file_offset: MPF Header offset from file start
+            - gainmap_relative_offset: Gainmap offset relative to MPF Header
+            - total_primary_len: Total length of primary section
     """
-    # Primary 部分的总长度（包括 stub 和 MPF 段）
+    # Total length of primary section (including stub and MPF segments)
     total_primary_len = (
         len(primary_bytes_raw) + len(primary_stub_segment) + len(mpf_segment_temp)
     )
 
-    # MPF marker 的文件偏移量（SOI 标记 2 字节 + primary_stub_segment）
+    # MPF marker offset (SOI marker 2 bytes + primary_stub_segment)
     mpf_marker_offset = 2 + len(primary_stub_segment)
 
-    # MPF Header 相对于文件开头的偏移量
-    # MPF marker (2 字节) + segment length (2 字节) + "MPF\0" (4 字节) = 8 字节
+    # MPF Header offset from file start
+    # MPF marker (2 bytes) + segment length (2 bytes) + "MPF\0" (4 bytes) = 8 bytes
     mpf_base_file_offset = mpf_marker_offset + 8
 
-    # Gainmap 相对于 MPF Header 的偏移量
-    # Gainmap 从 total_primary_len 开始，需要减去 MPF Header 的位置
+    # Gainmap offset relative to MPF Header
     gainmap_relative_offset = total_primary_len - mpf_base_file_offset
 
     return mpf_base_file_offset, gainmap_relative_offset, total_primary_len
@@ -767,18 +758,17 @@ def write_21496(data: GainmapImage, filepath: str, baseline_quality: int = 95, g
         - `hdr_to_gainmap`: Convert HDR image to GainmapImage.
     """
     try:
-        # 1. 编码 Gainmap 图像 (基础 JPEG 编码)
+        # Step 1: Encode gainmap image
         gainmap_bytes_raw = _create_jpeg_bytes(data["gainmap"], data.get("gainmap_icc"), gainmap_quality)
 
-        # 1.1 在 Gainmap 流中插入一个最小 MPF APP2（兼容性需要）
+        # Step 1.1: Insert minimal MPF APP2 in gainmap stream for compatibility
         gainmap_mpf_segment = _build_app2_segment(_build_mpf_minimal_payload(2))
 
-        # 2. 构建 ISO 21496-1 元数据段 (APP2)
-        #    标准建议将此元数据放在 Gainmap 图像流中
+        # Step 2: Build ISO 21496-1 metadata segment (APP2)
         iso_payload = _encode_iso21496_metadata(data["metadata"])
         iso_segment = _build_app2_segment(iso_payload)
 
-        #    将 ISO 段插入到 Gainmap 的 SOI (0xFFD8) 之后
+        # Insert ISO segment after SOI (0xFFD8) in gainmap
         gainmap_final = (
             gainmap_bytes_raw[:2]
             + gainmap_mpf_segment
@@ -786,36 +776,33 @@ def write_21496(data: GainmapImage, filepath: str, baseline_quality: int = 95, g
             + gainmap_bytes_raw[2:]
         )
 
-        # 3. 编码 Baseline 图像 (基础 JPEG 编码)
+        # Step 3: Encode baseline image
         primary_bytes_raw = _create_jpeg_bytes(
             data["baseline"], data.get("baseline_icc"), baseline_quality
         )
 
-        # 3.1 在 Primary 流中插入一个短 URN stub APP2（兼容性需要）
-        # 该 stub 不是完整元数据，仅用于标记 ISO21496 容器。
+        # Step 3.1: Insert URN stub APP2 in primary stream for compatibility
         primary_stub_segment = _build_app2_segment(ISO21496_URN + b"\x00\x00\x00\x00")
 
-        # 4. 构建 MPF 索引段 (APP2)
-        #    MPF 位于 Baseline 图像中，用于指向文件末尾的 Gainmap
+        # Step 4: Build MPF index segment (APP2)
+        # MPF points to gainmap at end of file
 
-        #    A. 首先生成一个带有占位偏移量的 MPF payload，用于计算长度
-        #       MPF 段放在 Primary stub 之后
+        # Step 4.1: Generate MPF payload with placeholder offset for length calculation
         mpf_payload_temp = _build_mpf_payload(
-            primary_size=len(primary_bytes_raw),  # 暂时的，稍后修正
+            primary_size=len(primary_bytes_raw),
             gainmap_size=len(gainmap_final),
-            gainmap_offset=0,  # 占位
+            gainmap_offset=0,  # Placeholder
         )
         mpf_segment_temp = _build_app2_segment(mpf_payload_temp)
 
-        #    B. 计算 MPF 相关的文件偏移量
-        #       使用辅助函数计算 MPF Header 位置和 Gainmap 相对偏移量
+        # Step 4.2: Calculate MPF-related file offsets
         _, gainmap_relative_offset, total_primary_len = _calculate_mpf_offsets(
             primary_bytes_raw,
             primary_stub_segment,
             mpf_segment_temp,
         )
 
-        #    C. 重新生成包含正确 Primary 大小和 Gainmap 偏移量的 MPF payload
+        # Step 4.3: Regenerate MPF with correct primary size and gainmap offset
         mpf_payload_final = _build_mpf_payload(
             primary_size=total_primary_len,
             gainmap_size=len(gainmap_final),
@@ -823,7 +810,7 @@ def write_21496(data: GainmapImage, filepath: str, baseline_quality: int = 95, g
         )
         mpf_segment_final = _build_app2_segment(mpf_payload_final)
 
-        # 5. 组装 Baseline 流 (插入 MPF)
+        # Step 5: Assemble baseline stream with MPF
         primary_final = (
             primary_bytes_raw[:2]
             + primary_stub_segment
@@ -831,7 +818,7 @@ def write_21496(data: GainmapImage, filepath: str, baseline_quality: int = 95, g
             + primary_bytes_raw[2:]
         )
 
-        # 6. 拼接并写入文件 (Baseline + Gainmap)
+        # Step 6: Write file (baseline + gainmap)
         with open(filepath, "wb") as f:
             f.write(primary_final)
             f.write(gainmap_final)
