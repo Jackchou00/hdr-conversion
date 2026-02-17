@@ -455,7 +455,9 @@ def _encode_iso21496_metadata(meta: Dict[str, Any]) -> bytes:
 # -----------------------------------------------------------------------------
 
 
-def _create_jpeg_bytes(img_arr: np.ndarray, icc: bytes | None, quality: int = 95) -> bytes:
+def _create_jpeg_bytes(
+    img_arr: np.ndarray, icc: bytes | None, quality: int = 95
+) -> bytes:
     """Encode numpy array to JPEG bytes using PIL."""
     # Convert to uint8 if needed
     if img_arr.dtype != np.uint8:
@@ -728,7 +730,12 @@ def read_21496(filepath: str) -> GainmapImage:
     )
 
 
-def write_21496(data: GainmapImage, filepath: str, baseline_quality: int = 95, gainmap_quality: int = 95) -> None:
+def write_21496(
+    data: GainmapImage,
+    filepath: str,
+    baseline_quality: int = 95,
+    gainmap_quality: int = 95,
+) -> None:
     """Write ISO 21496-1 Gainmap JPEG file.
 
     Creates a JPEG file with ISO 21496-1 compliant gainmap structure using
@@ -759,7 +766,9 @@ def write_21496(data: GainmapImage, filepath: str, baseline_quality: int = 95, g
     """
     try:
         # Step 1: Encode gainmap image
-        gainmap_bytes_raw = _create_jpeg_bytes(data["gainmap"], data.get("gainmap_icc"), gainmap_quality)
+        gainmap_bytes_raw = _create_jpeg_bytes(
+            data["gainmap"], data.get("gainmap_icc"), gainmap_quality
+        )
 
         # Step 1.1: Insert minimal MPF APP2 in gainmap stream for compatibility
         gainmap_mpf_segment = _build_app2_segment(_build_mpf_minimal_payload(2))

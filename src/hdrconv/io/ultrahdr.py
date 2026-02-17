@@ -367,7 +367,12 @@ def read_ultrahdr(filepath: str) -> GainmapImage:
     )
 
 
-def write_ultrahdr(data: GainmapImage, filepath: str, baseline_quality: int = 95, gainmap_quality: int = 95) -> None:
+def write_ultrahdr(
+    data: GainmapImage,
+    filepath: str,
+    baseline_quality: int = 95,
+    gainmap_quality: int = 95,
+) -> None:
     """Write UltraHDR JPEG file.
 
     Args:
@@ -377,7 +382,9 @@ def write_ultrahdr(data: GainmapImage, filepath: str, baseline_quality: int = 95
         gainmap_quality: JPEG quality for gainmap image (1-100, default 95).
     """
     try:
-        gainmap_bytes_raw = _create_jpeg_bytes(data["gainmap"], data.get("gainmap_icc"), gainmap_quality)
+        gainmap_bytes_raw = _create_jpeg_bytes(
+            data["gainmap"], data.get("gainmap_icc"), gainmap_quality
+        )
 
         # Insert minimal MPF APP2 in gainmap stream for compatibility
         gainmap_mpf_segment = _build_app2_segment(_build_mpf_minimal_payload(2))

@@ -49,8 +49,9 @@ Format transformation algorithms:
 
 - `gainmap_to_hdr()` / `hdr_to_gainmap()`
 - `apple_heic_to_hdr()`
-- `convert_color_space()`
-- `apply_pq()` / `inverse_pq()`
+
+!!! note "Color Space Conversion"
+    Built-in color space conversion functions have been removed. Users should implement color space conversions using external libraries like [`colour-science`](https://colour-science.readthedocs.io/). See [Examples](examples.md) for usage patterns.
 
 ### I/O (`hdrconv.io`)
 

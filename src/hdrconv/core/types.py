@@ -5,7 +5,7 @@ This module contains the TypedDict-based structures used across the library.
 
 from __future__ import annotations
 
-from typing import Optional, Tuple, TypedDict
+from typing import NotRequired, Optional, Required, Tuple, TypedDict
 
 import numpy as np
 
@@ -13,8 +13,8 @@ import numpy as np
 class GainmapMetadata(TypedDict, total=False):
     """ISO 21496-1 Gainmap metadata structure.
 
-    Contains transformation parameters for converting between baseline (SDR)
-    and alternate (HDR) representations as defined in ISO 21496-1.
+    Contains transformation parameters for converting between baseline
+    and alternate representations as defined in ISO 21496-1.
 
     Attributes:
         minimum_version: Minimum decoder version required. Should be 0.
@@ -56,22 +56,14 @@ class GainmapMetadata(TypedDict, total=False):
 class GainmapImage(TypedDict):
     """ISO 21496-1 Gainmap image structure.
 
-    Contains the baseline (SDR) image, gainmap, and associated metadata
-    required for HDR reconstruction using the ISO 21496-1 formula.
+    Contains the baseline image, gainmap, and metadata.
 
     Attributes:
-        baseline: SDR image array, uint8, shape (H, W, 3), range [0, 255].
-            Typically sRGB-encoded Display P3 or BT.709 content.
-        gainmap: Gain map array, uint8, shape (H, W, 3) or (H, W, 1),
-            range [0, 255]. Encodes the HDR-to-SDR ratio in log2 space.
-        metadata: GainmapMetadata dict containing transformation parameters
-            such as gamma, min/max values, and offsets.
+        baseline: numpy array, uint8, shape (H, W, 3), range [0, 255].
+        gainmap: numpy array, uint8, shape (H, W, 3) or (H, W, 1), range [0, 255].
+        metadata: GainmapMetadata dict containing transformation parameters.
         baseline_icc: Optional ICC profile bytes for baseline image color space.
         gainmap_icc: Optional ICC profile bytes for gainmap color space.
-
-    See Also:
-        - `read_21496`: Read GainmapImage from ISO 21496-1 JPEG file.
-        - `gainmap_to_hdr`: Convert GainmapImage to linear HDR.
     """
 
     baseline: np.ndarray
@@ -87,26 +79,27 @@ class HDRImage(TypedDict):
     Contains linear or transfer-encoded RGB data with associated color space
     and transfer function information for proper display and conversion.
 
-    Attributes:
+    Required Attributes:
         data: Image data array, float32, shape (H, W, 3).
             For linear transfer: values in linear light, range [0, peak_luminance/reference_white].
             For PQ transfer: values in range [0, 1] representing 0-10000 nits.
             For HLG transfer: values in range [0, 1] representing scene-referred light.
-        color_space: Color primaries identifier.
-            Options: 'bt709' (Rec. 709), 'p3' (Display P3), 'bt2020' (Rec. 2020).
         transfer_function: Transfer function applied to the data.
             Options: 'linear', 'pq' (SMPTE ST 2084), 'hlg' (ITU-R BT.2100), 'srgb'.
-        icc_profile: Optional ICC profile bytes for custom color space definition.
+
+    Optional Attributes:
+        color_space: Color primaries identifier.
+            Options: 'bt709' (Rec. 709), 'p3' (Display P3), 'bt2020' (Rec. 2020).
+        icc_profile: ICC profile bytes for custom color space definition.
 
     See Also:
         - `gainmap_to_hdr`: Create HDRImage from GainmapImage.
-        - `apply_pq`: Apply PQ transfer function to linear HDRImage.
     """
 
-    data: np.ndarray
-    color_space: str
-    transfer_function: str
-    icc_profile: Optional[bytes]
+    data: Required[np.ndarray]
+    transfer_function: Required[str]
+    color_space: NotRequired[str]
+    icc_profile: NotRequired[Optional[bytes]]
 
 
 class AppleHeicData(TypedDict):
@@ -119,11 +112,8 @@ class AppleHeicData(TypedDict):
         hdr_rgb = sdr_rgb * (1.0 + (headroom - 1.0) * gainmap)
 
     Attributes:
-        base: Base SDR image array, uint8, shape (H, W, 3), range [0, 255].
-            Encoded in Display P3 color space with sRGB transfer function.
-        gainmap: Gain map array, uint8, shape (H, W, 1), range [0, 255].
-            Single-channel map at 1/4 resolution of base image.
-            Uses Rec. 709 transfer function internally.
+        base: numpy image array, uint8, shape (H, W, 3), range [0, 255].
+        gainmap: numpy array, uint8, shape (H, W, 1), range [0, 255].
         headroom: Peak luminance headroom value, typically 2.0-8.0.
             Represents the maximum brightness multiplier for HDR highlights.
 

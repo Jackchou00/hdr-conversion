@@ -53,7 +53,6 @@ def apple_heic_to_hdr(data: AppleHeicData) -> HDRImage:
 
     See Also:
         - `read_apple_heic`: Read AppleHeicData from HEIC file.
-        - `convert_color_space`: Convert output to BT.2020 if needed.
     """
 
     def apply_gain_map(

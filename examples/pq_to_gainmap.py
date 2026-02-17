@@ -7,6 +7,8 @@ Demonstrates converting from pure HDR format to Gainmap format.
 import hdrconv.io as io
 import hdrconv.convert as convert
 
+import colour
+
 # Step 1: Read PQ AVIF
 print("Reading PQ AVIF file...")
 pq_data = io.read_22028_pq("images/iso22028.avif")
@@ -17,7 +19,7 @@ print(f"  Transfer: {pq_data['transfer_function']}")
 
 # Step 2: Convert PQ to linear HDR
 print("\nConverting PQ to linear...")
-linear_hdr = convert.inverse_pq(pq_data["data"])
+linear_hdr = colour.eotf(pq_data["data"], function="ITU-R BT.2100 PQ") / 203.0
 
 hdr = {
     "data": linear_hdr,
@@ -29,16 +31,15 @@ print(f"  Linear range: [{linear_hdr.min():.4f}, {linear_hdr.max():.4f}]")
 
 # Step 3: Convert HDR to Gainmap format
 
-# read a display p3 icc profile
-with open("baseline.icc", "rb") as f:
-    p3_icc = f.read()
+# read a bt.2020 icc profile
+with open("icc/ITU-R_BT2020-beta.icc", "rb") as f:
+    bt2020_icc = f.read()
 
 print("\nGenerating Gainmap...")
 gainmap_data = convert.hdr_to_gainmap(
     hdr,
     baseline=None,  # Auto-generate SDR baseline
-    color_space="p3",
-    icc_profile=p3_icc,
+    icc_profile=bt2020_icc,
     gamma=1.0,
 )
 
