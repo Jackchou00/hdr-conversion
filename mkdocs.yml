@@ -4,6 +4,11 @@ site_description: "Python HDR format conversion tools - ISO 21496-1, UltraHDR, P
 repo_url: https://github.com/Jackchou00/hdr-conversion
 repo_name: hdr-conversion
 
+extra:
+  version:
+    provider: mike
+    default: latest
+
 theme:
   name: material
   language: en

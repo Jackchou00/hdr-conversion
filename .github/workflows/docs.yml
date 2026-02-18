@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - main
+      - develop
+  release:
+    types: [published]
   workflow_dispatch:
 
 permissions:
@@ -14,6 +17,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Install uv
         uses: astral-sh/setup-uv@v4
@@ -23,5 +28,19 @@ jobs:
       - name: Create environment
         run: uv sync --dev
 
-      - name: Build and deploy docs
-        run: uv run mkdocs gh-deploy --force
+      - name: Configure git
+        run: |
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+
+      - name: Deploy release version
+        if: github.event_name == 'release'
+        run: uv run mike deploy --push --update-aliases ${{ github.ref_name }} latest
+
+      - name: Deploy develop preview
+        if: github.ref == 'refs/heads/develop'
+        run: uv run mike deploy --push dev
+
+      - name: Deploy main as stable
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        run: uv run mike deploy --push --update-aliases main stable
