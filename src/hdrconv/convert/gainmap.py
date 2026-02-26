@@ -156,6 +156,9 @@ def hdr_to_gainmap(
 
     # Compute alt headroom
     alt_headroom = np.log2(hdr_data.max() + 1e-6)
+    # temporarily set a minimum headroom to avoid extremely small values that can't be encoded
+    if alt_headroom <= 0.01:
+        alt_headroom = 0.01
 
     # preset offset for both baseline and alternate = 1/64
     alt_offset = float(1 / 64)

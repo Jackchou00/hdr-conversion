@@ -35,8 +35,6 @@ hdr_image: HDRImage = {
 gainmap_full_image = convert.hdr_to_gainmap(hdr_image, baseline_image_bt2020)
 
 gainmap_full_image["metadata"]["use_base_colour_space"] = False
-# otherwise it will be too small to be encoded (1e-6)
-gainmap_full_image["metadata"]["alternate_hdr_headroom"] = 0.01
 
 print("Gainmap metadata:")
 for key, value in gainmap_full_image["metadata"].items():
