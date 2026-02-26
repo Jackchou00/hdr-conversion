@@ -26,6 +26,18 @@ uv add hdr-conversion
 pip install hdr-conversion
 ```
 
+从开发分支安装
+
+```bash
+uv add git+https://github.com/Jackchou00/hdr-conversion.git --branch develop
+```
+
+或使用 pip
+
+```bash
+pip install git+https://github.com/Jackchou00/hdr-conversion.git@develop
+```
+
 可以按以下方式导入该包：
 
 ```python

@@ -26,6 +26,18 @@ or use `pip`:
 pip install hdr-conversion
 ```
 
+or install directly from the `develop` branch:
+
+```bash
+uv add git+https://github.com/Jackchou00/hdr-conversion.git --branch develop
+```
+
+Or use pip
+
+```bash
+pip install git+https://github.com/Jackchou00/hdr-conversion.git@develop
+```
+
 The package can be imported as follows:
 
 ```python

@@ -63,30 +63,37 @@ def apple_heic_to_hdr(data: AppleHeicData) -> HDRImage:
 
         gain_map_resized = np.array(
             Image.fromarray(gain_map).resize(
-                (base_image.shape[1], base_image.shape[0]), Image.BILINEAR
+                (base_image.shape[1], base_image.shape[0]), Image.BICUBIC
             )
         )
 
         gain_map_norm = gain_map_resized.astype(np.float32) / 255.0
-        gain_map_linear = np.where(
-            gain_map_norm <= 0.08145,
-            gain_map_norm / 4.5,
-            np.power((gain_map_norm + 0.099) / 1.099, 1 / 0.45),
-        )
-        gain_map_linear = np.clip(gain_map_linear, 0.0, 1.0)
+
+        def rec709_to_linear(gain_map_channel):
+            return np.where(
+                gain_map_channel <= 0.08145,
+                gain_map_channel / 4.5,
+                np.power((gain_map_channel + 0.099) / 1.099, 1 / 0.45),
+            )
+
+        def srgb_to_linear(base_image_channel):
+            return np.where(
+                base_image_channel <= 0.04,
+                base_image_channel * 0.077,
+                np.power((base_image_channel + 0.052) * 0.948, 2.4),
+            )
+
+        gain_map_linear = rec709_to_linear(gain_map_norm)
+        # gain_map_linear = np.clip(gain_map_linear, 0.0, 1.0)
 
         base_image_norm = base_image.astype(np.float32) / 255.0
-        base_image_linear = np.where(
-            base_image_norm <= 0.04045,
-            base_image_norm / 12.92,
-            np.power((base_image_norm + 0.055) / 1.055, 2.4),
-        )
-        base_image_linear = np.clip(base_image_linear, 0.0, 1.0)
+        base_image_linear = srgb_to_linear(base_image_norm)
+        # base_image_linear = np.clip(base_image_linear, 0.0, 1.0)
 
         hdr_image_linear = base_image_linear * (
             1.0 + (headroom - 1.0) * gain_map_linear[..., np.newaxis]
         )
-        hdr_image_linear = np.clip(hdr_image_linear, 0.0, None)
+        # hdr_image_linear = np.clip(hdr_image_linear, 0.0, None)
         return hdr_image_linear
 
     hdr_linear = apply_gain_map(data["base"], data["gainmap"], data["headroom"])
