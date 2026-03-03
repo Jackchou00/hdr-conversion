@@ -253,60 +253,101 @@ def _split_mpf_container(data: bytes) -> Tuple[bytes, bytes]:
         Uses MPF Index IFD to locate the offset of the second image.
         Falls back to returning only primary if split fails.
     """
-    # 1. Scan for MPF Segment
-    pos = 0
-    mpf_offset_base = 0
+    if data[:2] != SOI:
+        return data, b""
+
+    # 1. Scan marker segments of the primary JPEG only (from SOI to SOS).
+    # This avoids false APP2 hits inside entropy-coded scan data.
+    pos = 2
+    data_len = len(data)
     second_image_offset = 0
 
-    while pos < len(data) - 1:
-        if data[pos : pos + 2] == b"\xff\xe2":  # APP2
-            seg_len = int.from_bytes(data[pos + 2 : pos + 4], "big")
-            payload = data[pos + 4 : pos + 2 + seg_len]
-            if payload.startswith(MPF_LABEL):
-                # Found MPF
-                mpf_offset_base = (
-                    pos + 4 + 4
-                )  # Start of Endian tag (after marker+len+MPF\0)
-                endian = ">" if payload[4:6] == b"MM" else "<"
-                try:
-                    # Parse MP Entry for Image 2
-                    first_ifd = struct.unpack(f"{endian}I", payload[8:12])[0]
-                    base = 4
-                    ifd_idx = base + first_ifd
-                    entries_offset_local = 0
+    while pos < data_len - 1:
+        if data[pos] != 0xFF:
+            pos += 1
+            continue
 
-                    # Find tag 0xB002
-                    cnt = struct.unpack(f"{endian}H", payload[ifd_idx : ifd_idx + 2])[0]
-                    cursor = ifd_idx + 2
-                    for _ in range(cnt):
-                        tag, _, _, val = struct.unpack(
-                            f"{endian}HHII", payload[cursor : cursor + 12]
-                        )
-                        if tag == 0xB002:
-                            entries_offset_local = val
-                            break
-                        cursor += 12
+        marker_pos = pos
+        marker_byte = data[pos + 1]
+        pos += 2
 
-                    if entries_offset_local:
-                        # Get 2nd entry offset
-                        # Entry 1 (16 bytes), Entry 2 (16 bytes)
-                        entry2_pos = base + entries_offset_local + 16
+        while marker_byte == 0xFF and pos < data_len:
+            marker_byte = data[pos]
+            pos += 1
+
+        marker_code = 0xFF00 | marker_byte
+
+        # Stop at SOS: markers after this point are inside compressed stream.
+        if marker_code == SOS:
+            break
+        if marker_code == 0xFFD9:  # EOI
+            break
+        if 0xFFD0 <= marker_code <= 0xFFD7 or marker_code == 0xFF01:
+            continue
+
+        if pos + 2 > data_len:
+            break
+        seg_len = int.from_bytes(data[pos : pos + 2], "big")
+        payload_start = pos + 2
+        payload_end = pos + seg_len
+        if seg_len < 2 or payload_end > data_len:
+            break
+        payload = data[payload_start:payload_end]
+
+        if marker_code == APP2 and payload.startswith(MPF_LABEL):
+            # MPF header base is at the TIFF header ("MM"/"II"), i.e. after MPF\0.
+            mpf_offset_base = marker_pos + 8
+            try:
+                if len(payload) < 12:
+                    break
+
+                endian_sig = payload[4:6]
+                if endian_sig == b"MM":
+                    endian = ">"
+                elif endian_sig == b"II":
+                    endian = "<"
+                else:
+                    break
+
+                base = 4
+                first_ifd = struct.unpack(f"{endian}I", payload[8:12])[0]
+                ifd_idx = base + first_ifd
+                if ifd_idx + 2 > len(payload):
+                    break
+
+                entry_count = struct.unpack(f"{endian}H", payload[ifd_idx : ifd_idx + 2])[
+                    0
+                ]
+                cursor = ifd_idx + 2
+                entries_offset_local = 0
+
+                for _ in range(entry_count):
+                    if cursor + 12 > len(payload):
+                        break
+                    tag, _, _, val = struct.unpack(
+                        f"{endian}HHII", payload[cursor : cursor + 12]
+                    )
+                    if tag == 0xB002:
+                        entries_offset_local = val
+                        break
+                    cursor += 12
+
+                if entries_offset_local:
+                    # Read 2nd MP Entry (index 1): Attr(4), Size(4), Offset(4), Dep(4)
+                    entry2_pos = base + entries_offset_local + 16
+                    if entry2_pos + 12 <= len(payload):
                         img2_offset = struct.unpack(
                             f"{endian}I", payload[entry2_pos + 8 : entry2_pos + 12]
                         )[0]
                         if img2_offset > 0:
                             second_image_offset = mpf_offset_base + img2_offset
-                except Exception:
-                    pass
-                break
-            pos += 2 + seg_len
-        elif data[pos] == 0xFF:
-            # Fast forward
-            pos += 1
-        else:
-            pos += 1
+            except Exception:
+                pass
+            break
 
-    if second_image_offset > 0 and second_image_offset < len(data):
+        pos = payload_end
+
+    if second_image_offset > 0 and second_image_offset < data_len:
         return data[:second_image_offset], data[second_image_offset:]
 
     # Fallback: Return only primary if split fails
