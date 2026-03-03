@@ -35,12 +35,14 @@ jobs:
 
       - name: Deploy release version
         if: github.event_name == 'release'
-        run: uv run mike deploy --push --update-aliases ${{ github.ref_name }} latest
+        run: |
+          if [[ ! "$GITHUB_REF_NAME" =~ ^v?[0-9]+\.[0-9]+\.[0-9]+([.-][0-9A-Za-z]+)*$ ]]; then
+            echo "Invalid release tag format: $GITHUB_REF_NAME"
+            exit 1
+          fi
+          VERSION="${GITHUB_REF_NAME#v}"
+          uv run mike deploy --push --update-aliases "$VERSION" latest
 
-      - name: Deploy develop preview
+      - name: Deploy develop docs
         if: github.ref == 'refs/heads/develop'
-        run: uv run mike deploy --push dev
-
-      - name: Deploy main as stable
-        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-        run: uv run mike deploy --push --update-aliases main stable
+        run: uv run mike deploy --push develop
