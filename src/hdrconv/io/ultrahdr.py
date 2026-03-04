@@ -142,8 +142,8 @@ def _hdrgm_to_gainmap_metadata(
     if capacity_max is None:
         capacity_max = float(np.max(gainmap_max))
 
-    baseline_hdr_headroom = float(np.exp2(capacity_min))
-    alternate_hdr_headroom = float(np.exp2(capacity_max))
+    baseline_hdr_headroom = float(capacity_min)
+    alternate_hdr_headroom = float(capacity_max)
 
     is_multichannel = False
     if gainmap.ndim == 3 and gainmap.shape[2] >= 3:
