@@ -5,9 +5,12 @@ This module contains the TypedDict-based structures used across the library.
 
 from __future__ import annotations
 
-from typing import NotRequired, Optional, Required, Tuple, TypedDict
+from typing import NotRequired, Optional, Required, Tuple, TypedDict, Union
 
 import numpy as np
+
+
+ChannelValues = Union[Tuple[float], Tuple[float, float, float]]
 
 
 class GainmapMetadata(TypedDict, total=False):
@@ -23,11 +26,11 @@ class GainmapMetadata(TypedDict, total=False):
         alternate_hdr_headroom: HDR headroom of alternate image (e.g., 4.5).
         is_multichannel: True if gainmap has separate RGB channels, False for single channel.
         use_base_colour_space: True to compute in baseline color space, False for alternate.
-        gainmap_min: Minimum gainmap values per channel, tuple of 3 floats.
-        gainmap_max: Maximum gainmap values per channel, tuple of 3 floats.
-        gainmap_gamma: Gamma values per channel for gainmap decoding, tuple of 3 floats.
-        baseline_offset: Offset added to baseline before multiplication, tuple of 3 floats.
-        alternate_offset: Offset subtracted from result, tuple of 3 floats.
+        gainmap_min: Minimum gainmap values, tuple of 1 or 3 floats.
+        gainmap_max: Maximum gainmap values, tuple of 1 or 3 floats.
+        gainmap_gamma: Gamma values for gainmap decoding, tuple of 1 or 3 floats.
+        baseline_offset: Offset added to baseline before multiplication, tuple of 1 or 3 floats.
+        alternate_offset: Offset subtracted from result, tuple of 1 or 3 floats.
 
     """
 
@@ -44,13 +47,13 @@ class GainmapMetadata(TypedDict, total=False):
     use_base_colour_space: bool
 
     # Gainmap transformation parameters
-    gainmap_min: Tuple[float, float, float]
-    gainmap_max: Tuple[float, float, float]
-    gainmap_gamma: Tuple[float, float, float]
+    gainmap_min: ChannelValues
+    gainmap_max: ChannelValues
+    gainmap_gamma: ChannelValues
 
     # Offset parameters
-    baseline_offset: Tuple[float, float, float]
-    alternate_offset: Tuple[float, float, float]
+    baseline_offset: ChannelValues
+    alternate_offset: ChannelValues
 
 
 class GainmapImage(TypedDict):

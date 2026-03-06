@@ -117,22 +117,26 @@ def _parse_hdrgm_metadata(xmp_xml: str) -> Dict[str, Any]:
     return metadata
 
 
-def _triple(value: Any, default: float = 0.0) -> Tuple[float, float, float]:
-    if isinstance(value, (list, tuple)) and len(value) == 3:
-        return (float(value[0]), float(value[1]), float(value[2]))
-    if isinstance(value, (int, float)):
-        return (float(value), float(value), float(value))
-    return (float(default), float(default), float(default))
+def _channel_values(value: Any, default: float = 0.0) -> Tuple[float, ...]:
+    if isinstance(value, (list, tuple)):
+        if len(value) == 1:
+            return (float(value[0]),)
+        if len(value) == 3:
+            return (float(value[0]), float(value[1]), float(value[2]))
+        return (float(default),)
+    if isinstance(value, (int, float, np.integer, np.floating)):
+        return (float(value),)
+    return (float(default),)
 
 
 def _hdrgm_to_gainmap_metadata(
     hdrgm: Dict[str, Any], gainmap: np.ndarray
 ) -> GainmapMetadata:
-    gainmap_min = _triple(hdrgm.get("GainMapMin", 0.0), 0.0)
-    gainmap_max = _triple(hdrgm.get("GainMapMax", 1.0), 1.0)
-    gainmap_gamma = _triple(hdrgm.get("Gamma", 1.0), 1.0)
-    baseline_offset = _triple(hdrgm.get("OffsetSDR", 0.0), 0.0)
-    alternate_offset = _triple(hdrgm.get("OffsetHDR", 0.0), 0.0)
+    gainmap_min = _channel_values(hdrgm.get("GainMapMin", 0.0), 0.0)
+    gainmap_max = _channel_values(hdrgm.get("GainMapMax", 1.0), 1.0)
+    gainmap_gamma = _channel_values(hdrgm.get("Gamma", 1.0), 1.0)
+    baseline_offset = _channel_values(hdrgm.get("OffsetSDR", 0.0), 0.0)
+    alternate_offset = _channel_values(hdrgm.get("OffsetHDR", 0.0), 0.0)
 
     # Use gainmap min/max for HDR capacity if explicit values are absent
     capacity_min = hdrgm.get("HDRCapacityMin", None)
@@ -148,7 +152,9 @@ def _hdrgm_to_gainmap_metadata(
     is_multichannel = False
     if gainmap.ndim == 3 and gainmap.shape[2] >= 3:
         # Treat as multichannel only if values differ per channel
-        def is_triple_distinct(values: Tuple[float, float, float]) -> bool:
+        def is_triple_distinct(values: Tuple[float, ...]) -> bool:
+            if len(values) != 3:
+                return False
             return not (
                 abs(values[0] - values[1]) < 1e-6 and abs(values[0] - values[2]) < 1e-6
             )
@@ -185,17 +191,34 @@ def _format_float(value: float) -> str:
     return f"{value:.6f}".rstrip("0").rstrip(".")
 
 
+def _to_triplet(values: Any, field_name: str) -> Tuple[float, float, float]:
+    if isinstance(values, (int, float, np.integer, np.floating)):
+        return (float(values), float(values), float(values))
+    seq = tuple(float(v) for v in values)
+    if len(seq) == 1:
+        return (seq[0], seq[0], seq[0])
+    if len(seq) == 3:
+        return (seq[0], seq[1], seq[2])
+    raise ValueError(
+        f"Invalid metadata field '{field_name}': expected 1 or 3 values, got {len(seq)}."
+    )
+
+
 def _xmp_seq(tag: str, values: Tuple[float, float, float]) -> str:
     items = "".join(f"<rdf:li>{_format_float(v)}</rdf:li>" for v in values)
     return f"<hdrgm:{tag}><rdf:Seq>{items}</rdf:Seq></hdrgm:{tag}>"
 
 
 def _build_hdrgm_xmp(metadata: GainmapMetadata) -> bytes:
-    gainmap_min = metadata.get("gainmap_min", (0.0, 0.0, 0.0))
-    gainmap_max = metadata.get("gainmap_max", (1.0, 1.0, 1.0))
-    gainmap_gamma = metadata.get("gainmap_gamma", (1.0, 1.0, 1.0))
-    baseline_offset = metadata.get("baseline_offset", (0.0, 0.0, 0.0))
-    alternate_offset = metadata.get("alternate_offset", (0.0, 0.0, 0.0))
+    gainmap_min = _to_triplet(metadata.get("gainmap_min", (0.0,)), "gainmap_min")
+    gainmap_max = _to_triplet(metadata.get("gainmap_max", (1.0,)), "gainmap_max")
+    gainmap_gamma = _to_triplet(metadata.get("gainmap_gamma", (1.0,)), "gainmap_gamma")
+    baseline_offset = _to_triplet(
+        metadata.get("baseline_offset", (0.0,)), "baseline_offset"
+    )
+    alternate_offset = _to_triplet(
+        metadata.get("alternate_offset", (0.0,)), "alternate_offset"
+    )
 
     baseline_headroom = metadata.get("baseline_hdr_headroom", 0.0)
     alternate_headroom = metadata.get("alternate_hdr_headroom", 1.0)
@@ -326,10 +349,16 @@ def read_ultrahdr(filepath: str) -> GainmapImage:
             category=UserWarning,
         )
         base_img = Image.open(io.BytesIO(primary_data)).convert("RGB")
-        gain_img = Image.open(io.BytesIO(gainmap_data)).convert("RGB")
+        gain_img = Image.open(io.BytesIO(gainmap_data))
+        if gain_img.mode not in ("L", "RGB"):
+            gain_img = gain_img.convert("RGB")
 
     base_arr = np.array(base_img)
     gain_arr = np.array(gain_img)
+    if gain_arr.ndim == 2:
+        gain_arr = gain_arr[:, :, np.newaxis]
+    elif gain_arr.ndim == 3 and gain_arr.shape[2] == 4:
+        gain_arr = gain_arr[:, :, :3]
 
     base_segments = list(_yield_jpeg_segments(primary_data))
     gain_segments = list(_yield_jpeg_segments(gainmap_data))

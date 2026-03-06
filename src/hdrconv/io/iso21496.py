@@ -365,6 +365,29 @@ def _read_rational(data: bytes, offset: int, signed: bool = False) -> float:
     return num / den if den != 0 else 0.0
 
 
+def _coerce_channel_values(
+    values: Any, field_name: str, default: Tuple[float, ...]
+) -> Tuple[float, ...]:
+    if values is None:
+        seq = default
+    elif isinstance(values, (int, float, np.integer, np.floating)):
+        seq = (float(values),)
+    else:
+        seq = tuple(float(v) for v in values)
+
+    if len(seq) not in (1, 3):
+        raise ValueError(
+            f"Invalid {field_name}: expected 1 or 3 values, got {len(seq)}."
+        )
+    return seq
+
+
+def _to_triplet(values: Tuple[float, ...]) -> Tuple[float, float, float]:
+    if len(values) == 3:
+        return (values[0], values[1], values[2])
+    return (values[0], values[0], values[0])
+
+
 def _parse_iso21496_metadata(payload: bytes) -> Dict[str, Any]:
     """Parses binary APP2 payload into the specified dictionary structure."""
 
@@ -409,12 +432,14 @@ def _parse_iso21496_metadata(payload: bytes) -> Dict[str, Any]:
         channels.append(c)
 
     # Format to Output Structure
-    def get_triple(key):
+    # TODO: Keep source channel cardinality (1 or 3) in parsed metadata.
+    # Expansion should happen at use sites (conversion/writing), not read time.
+    def get_channel_values(key: str) -> Tuple[float, ...]:
         if is_multichannel:
             return (channels[0][key], channels[1][key], channels[2][key])
         else:
             v = channels[0][key]
-            return (v, v, v)
+            return (v,)
 
     return {
         "alternate_hdr_headroom": float(alt_headroom),
@@ -423,11 +448,11 @@ def _parse_iso21496_metadata(payload: bytes) -> Dict[str, Any]:
         "use_base_colour_space": use_base_space,
         "minimum_version": min_ver,  # Should be 0
         "writer_version": writer_ver,
-        "alternate_offset": get_triple("alt_off"),
-        "baseline_offset": get_triple("base_off"),
-        "gainmap_min": get_triple("min"),
-        "gainmap_max": get_triple("max"),
-        "gainmap_gamma": get_triple("gamma"),
+        "alternate_offset": get_channel_values("alt_off"),
+        "baseline_offset": get_channel_values("base_off"),
+        "gainmap_min": get_channel_values("min"),
+        "gainmap_max": get_channel_values("max"),
+        "gainmap_gamma": get_channel_values("gamma"),
     }
 
 
@@ -463,29 +488,46 @@ def _encode_iso21496_metadata(meta: Dict[str, Any]) -> bytes:
     out.extend(struct.pack(">II", n, d))
 
     # Channels
-    count = 3 if is_mc else 1
+    gm_min = _coerce_channel_values(meta.get("gainmap_min"), "gainmap_min", (0.0,))
+    gm_max = _coerce_channel_values(meta.get("gainmap_max"), "gainmap_max", (1.0,))
+    gm_gam = _coerce_channel_values(meta.get("gainmap_gamma"), "gainmap_gamma", (1.0,))
+    base_off = _coerce_channel_values(
+        meta.get("baseline_offset"), "baseline_offset", (0.0,)
+    )
+    alt_off = _coerce_channel_values(
+        meta.get("alternate_offset"), "alternate_offset", (0.0,)
+    )
 
-    gm_min = meta.get("gainmap_min", (0, 0, 0))
-    gm_max = meta.get("gainmap_max", (1, 1, 1))
-    gm_gam = meta.get("gainmap_gamma", (1, 1, 1))
-    base_off = meta.get("baseline_offset", (0, 0, 0))
-    alt_off = meta.get("alternate_offset", (0, 0, 0))
+    if is_mc:
+        count = 3
+        gm_min_w = _to_triplet(gm_min)
+        gm_max_w = _to_triplet(gm_max)
+        gm_gam_w = _to_triplet(gm_gam)
+        base_off_w = _to_triplet(base_off)
+        alt_off_w = _to_triplet(alt_off)
+    else:
+        count = 1
+        gm_min_w = (gm_min[0],)
+        gm_max_w = (gm_max[0],)
+        gm_gam_w = (gm_gam[0],)
+        base_off_w = (base_off[0],)
+        alt_off_w = (alt_off[0],)
 
     for i in range(count):
         # min (signed)
-        n, d = to_rational(gm_min[i], True)
+        n, d = to_rational(gm_min_w[i], True)
         out.extend(struct.pack(">iI", n, d))
         # max (signed)
-        n, d = to_rational(gm_max[i], True)
+        n, d = to_rational(gm_max_w[i], True)
         out.extend(struct.pack(">iI", n, d))
         # gamma (unsigned)
-        n, d = to_rational(gm_gam[i], False)
+        n, d = to_rational(gm_gam_w[i], False)
         out.extend(struct.pack(">II", n, d))
         # base offset (signed)
-        n, d = to_rational(base_off[i], True)
+        n, d = to_rational(base_off_w[i], True)
         out.extend(struct.pack(">iI", n, d))
         # alt offset (signed)
-        n, d = to_rational(alt_off[i], True)
+        n, d = to_rational(alt_off_w[i], True)
         out.extend(struct.pack(">iI", n, d))
 
     return bytes(out)
@@ -507,9 +549,11 @@ def _create_jpeg_bytes(
         else:
             img_arr = np.clip(img_arr, 0, 255).astype(np.uint8)
 
-    # Ensure RGB format
+    # Ensure PIL-compatible format (L or RGB)
     if img_arr.ndim == 2:
-        img_arr = np.stack([img_arr] * 3, axis=-1)
+        pass
+    elif img_arr.shape[2] == 1:
+        img_arr = img_arr[:, :, 0]
     elif img_arr.shape[2] == 4:
         img_arr = img_arr[:, :, :3]  # Drop alpha channel
 

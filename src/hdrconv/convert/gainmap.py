@@ -26,6 +26,17 @@ with warnings.catch_warnings():
 from hdrconv.core import GainmapImage, GainmapMetadata, HDRImage
 
 
+def _as_triplet(values: object, field_name: str) -> np.ndarray:
+    arr = np.asarray(values, dtype=np.float32).reshape(-1)
+    if arr.size == 1:
+        return np.repeat(arr, 3)
+    if arr.size == 3:
+        return arr
+    raise ValueError(
+        f"Invalid metadata field '{field_name}': expected 1 or 3 values, got {arr.size}."
+    )
+
+
 def gainmap_to_hdr(
     data: GainmapImage,
 ) -> HDRImage:
@@ -81,12 +92,12 @@ def gainmap_to_hdr(
     if gainmap.shape[2] == 1:
         gainmap = np.repeat(gainmap, 3, axis=2)
 
-    # Extract metadata (convert to arrays for broadcasting)
-    gainmap_min = np.array(metadata["gainmap_min"], dtype=np.float32)
-    gainmap_max = np.array(metadata["gainmap_max"], dtype=np.float32)
-    gainmap_gamma = np.array(metadata["gainmap_gamma"], dtype=np.float32)
-    baseline_offset = np.array(metadata["baseline_offset"], dtype=np.float32)
-    alternate_offset = np.array(metadata["alternate_offset"], dtype=np.float32)
+    # TODO: Move metadata channel normalization to a shared helper across I/O paths.
+    gainmap_min = _as_triplet(metadata["gainmap_min"], "gainmap_min")
+    gainmap_max = _as_triplet(metadata["gainmap_max"], "gainmap_max")
+    gainmap_gamma = _as_triplet(metadata["gainmap_gamma"], "gainmap_gamma")
+    baseline_offset = _as_triplet(metadata["baseline_offset"], "baseline_offset")
+    alternate_offset = _as_triplet(metadata["alternate_offset"], "alternate_offset")
 
     gainmap = np.clip(gainmap, 0.0, 1.0)
 
