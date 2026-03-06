@@ -24,6 +24,7 @@ with warnings.catch_warnings():
     import colour
 
 from hdrconv.core import GainmapImage, GainmapMetadata, HDRImage
+from hdrconv.icc import linearize_array_with_icc
 
 
 def _as_triplet(values: object, field_name: str) -> np.ndarray:
@@ -35,6 +36,37 @@ def _as_triplet(values: object, field_name: str) -> np.ndarray:
     raise ValueError(
         f"Invalid metadata field '{field_name}': expected 1 or 3 values, got {arr.size}."
     )
+
+
+def _resize_gainmap_array(gainmap: np.ndarray, size: tuple[int, int]) -> np.ndarray:
+    gainmap_uint8 = np.clip(gainmap * 255.0, 0, 255).astype(np.uint8)
+
+    if gainmap_uint8.ndim == 2:
+        pil_image = Image.fromarray(gainmap_uint8, mode="L")
+    elif gainmap_uint8.ndim == 3:
+        channel_count = gainmap_uint8.shape[2]
+        if channel_count == 1:
+            pil_image = Image.fromarray(gainmap_uint8[:, :, 0], mode="L")
+        elif channel_count == 3:
+            pil_image = Image.fromarray(gainmap_uint8, mode="RGB")
+        elif channel_count == 4:
+            pil_image = Image.fromarray(gainmap_uint8, mode="RGBA")
+        else:
+            pil_image = Image.fromarray(gainmap_uint8[:, :, 0], mode="L")
+    else:
+        raise ValueError(
+            f"Invalid gainmap shape for resize: expected 2D or 3D array, got {gainmap_uint8.shape}."
+        )
+
+    pil_image_resized = pil_image.resize(size, Image.BILINEAR)
+    gainmap_resized = np.array(pil_image_resized, dtype=np.float32) / 255.0
+
+    if gainmap_resized.ndim == 2:
+        gainmap_resized = gainmap_resized[:, :, np.newaxis]
+    elif gainmap_resized.ndim == 3 and gainmap_resized.shape[2] == 4:
+        gainmap_resized = gainmap_resized[:, :, :3]
+
+    return gainmap_resized
 
 
 def gainmap_to_hdr(
@@ -56,35 +88,29 @@ def gainmap_to_hdr(
         - ``data`` (np.ndarray): Linear HDR array, float32, shape (H, W, 3).
         - ``transfer_function`` (str): Always 'linear'.
 
-    Note:
-        The baseline image must be in linear light space (not gamma-encoded).
-        The caller is responsible for applying EOTF conversion before calling
-        this function if the input is gamma-encoded (e.g., sRGB).
-
     See Also:
         - `hdr_to_gainmap`: Inverse operation, create gainmap from HDR.
     """
+
+    # Linearize baseline
     baseline = data["baseline"].astype(np.float32) / 255.0  # Normalize to [0, 1]
+    icc_source = data.get("baseline_icc")
+    linear_baseline = None
+    if icc_source:
+        try:
+            linear_baseline = linearize_array_with_icc(data["baseline_icc"], baseline)
+        except Exception as e:
+            warnings.warn(e)
+    if linear_baseline is None:
+        linear_baseline = colour.eotf(baseline, function="sRGB")
+
     gainmap = data["gainmap"].astype(np.float32) / 255.0
     metadata = data["metadata"]
 
     # Resize gainmap to match baseline if needed
     h, w = baseline.shape[:2]
     if gainmap.shape[:2] != (h, w):
-        # Use Pillow for resizing: convert float32 [0,1] -> uint8 [0,255] -> resize -> back to float32
-        gainmap_uint8 = np.clip(gainmap * 255.0, 0, 255).astype(np.uint8)
-
-        # Handle 2D grayscale and 3D RGB arrays
-        if gainmap_uint8.ndim == 2:
-            pil_image = Image.fromarray(gainmap_uint8, mode="L")
-        else:
-            pil_image = Image.fromarray(gainmap_uint8, mode="RGB")
-
-        # Resize using bilinear interpolation (equivalent to cv2.INTER_LINEAR)
-        pil_image_resized = pil_image.resize((w, h), Image.BILINEAR)
-
-        # Convert back to float32 [0,1]
-        gainmap = np.array(pil_image_resized, dtype=np.float32) / 255.0
+        gainmap = _resize_gainmap_array(gainmap, (w, h))
 
     # Ensure gainmap is 3-channel for calculations
     if gainmap.ndim == 2:
@@ -110,7 +136,7 @@ def gainmap_to_hdr(
     gainmap_linear = np.exp2(gainmap_decoded)
 
     # Reconstruct alternate (HDR) image
-    hdr_linear = gainmap_linear * (baseline + baseline_offset) - alternate_offset
+    hdr_linear = gainmap_linear * (linear_baseline + baseline_offset) - alternate_offset
 
     hdr_linear = np.clip(hdr_linear, 0.0, None)
 

@@ -315,9 +315,9 @@ def _split_mpf_container(data: bytes) -> Tuple[bytes, bytes]:
                 if ifd_idx + 2 > len(payload):
                     break
 
-                entry_count = struct.unpack(f"{endian}H", payload[ifd_idx : ifd_idx + 2])[
-                    0
-                ]
+                entry_count = struct.unpack(
+                    f"{endian}H", payload[ifd_idx : ifd_idx + 2]
+                )[0]
                 cursor = ifd_idx + 2
                 entries_offset_local = 0
 
