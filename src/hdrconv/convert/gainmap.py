@@ -24,7 +24,7 @@ with warnings.catch_warnings():
     import colour
 
 from hdrconv.core import GainmapImage, GainmapMetadata, HDRImage
-from hdrconv.icc import linearize_array_with_icc
+from hdrconv.icc import linearize_array_with_icc, convert_array_with_icc_matrix
 
 
 def _as_triplet(values: object, field_name: str) -> np.ndarray:
@@ -135,9 +135,24 @@ def gainmap_to_hdr(
     # Convert to linear multiplier
     gainmap_linear = np.exp2(gainmap_decoded)
 
+    # if use_base_colour_space is False, convert baseline to alternate space
+    if not data["metadata"]["use_base_colour_space"]:
+        linear_baseline_alt = None
+        if data["baseline_icc"] is not None and data["gainmap_icc"] is not None:
+            try:
+                linear_baseline_alt = convert_array_with_icc_matrix(
+                    source_icc=data["baseline_icc"],
+                    target_icc=data["gainmap_icc"],
+                    img_array=linear_baseline,
+                )
+            except Exception as e:
+                warnings.warn(e)
+        if linear_baseline_alt is None:
+            linear_baseline_alt = linear_baseline
+        linear_baseline = linear_baseline_alt
+
     # Reconstruct alternate (HDR) image
     hdr_linear = gainmap_linear * (linear_baseline + baseline_offset) - alternate_offset
-
     hdr_linear = np.clip(hdr_linear, 0.0, None)
 
     return HDRImage(

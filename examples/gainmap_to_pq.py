@@ -12,7 +12,7 @@ import colour
 
 # Step 1: Read ISO 21496-1 Gainmap JPEG
 print("Reading ISO 21496-1 file...")
-gainmap_data = io.read_21496("images/Xiaomi17Ultra.jpg")
+gainmap_data = io.read_21496("images/iso21496.jpg")
 
 print(f"  Baseline shape: {gainmap_data['baseline'].shape}")
 print(f"  Gainmap shape: {gainmap_data['gainmap'].shape}")
@@ -36,7 +36,7 @@ print(f"  PQ range: [{pq_encoded.min():.4f}, {pq_encoded.max():.4f}]")
 print("\nWriting PQ AVIF...")
 pq_data = {
     "data": pq_encoded,
-    "color_space": "p3",
+    "color_space": "bt2020",
     "transfer_function": "pq",
     "icc_profile": None,
 }
