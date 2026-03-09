@@ -163,6 +163,37 @@ def _gainmapmax_from_u16_triplet(a: int, b: int, c: int) -> float:
     return (a + b / 65535.0) / c
 
 
+def _parse_gainmapmax_from_tmap_u16(u16: list[int]) -> float:
+    """Parse gainmapmax from the observed iOS tmap layouts.
+
+    Two layouts have been observed in iOS HDR screenshots:
+    - layout A: gainmapmax triplet starts at indices 7 and 15
+    - layout B: gainmapmax triplet starts at indices 8 and 16
+
+    In both layouts the value is duplicated 8 u16 entries later.
+    """
+    candidate_starts = (7, 8)
+
+    for start in candidate_starts:
+        repeat_start = start + 8
+        if repeat_start + 2 >= len(u16):
+            continue
+
+        triplet = u16[start : start + 3]
+        repeated_triplet = u16[repeat_start : repeat_start + 3]
+        if triplet != repeated_triplet:
+            continue
+
+        if triplet[2] == 0:
+            continue
+
+        return _gainmapmax_from_u16_triplet(*triplet)
+
+    raise ValueError(
+        "Unable to parse gainmapmax from tmap data: unsupported iOS tmap layout"
+    )
+
+
 def _find_tmap_item_ids(file_path: str) -> list[int]:
     """Find tmap item IDs using MP4Box."""
     cmd = ["MP4Box", "-info", file_path]
@@ -199,13 +230,22 @@ def _dump_tmap_bytes(file_path: str, temp_dir: str) -> Optional[bytes]:
 def _parse_gainmapmax_offset_from_tmap(tmap_data: bytes) -> Tuple[float, float]:
     """Parse gainmapmax and offset from tmap data.
 
-    The tmap format stores:
-    - gainmapmax: at u16 indices 7,8,9
+    Observed iOS tmap layouts store gainmapmax in one of two repeated triplets:
+    - layout A: u16 indices 7,8,9 and 15,16,17
+    - layout B: u16 indices 8,9,10 and 16,17,18
+
+    The offset fields are stable across both layouts:
     - offset_1: at u16 indices 23,24,25
     - offset_2: at u16 indices 27,28,29 (should equal offset_1)
     """
     u16 = _parse_u16_be(tmap_data)
-    gainmapmax = _gainmapmax_from_u16_triplet(u16[7], u16[8], u16[9])
+
+    if len(u16) <= 29:
+        raise ValueError(
+            f"tmap data too short: expected at least 30 u16 values, got {len(u16)}"
+        )
+
+    gainmapmax = _parse_gainmapmax_from_tmap_u16(u16)
     offset_1 = _gainmapmax_from_u16_triplet(u16[23], u16[24], u16[25])
     offset_2 = _gainmapmax_from_u16_triplet(u16[27], u16[28], u16[29])
     if abs(offset_1 - offset_2) < 1e-9:
@@ -213,8 +253,62 @@ def _parse_gainmapmax_offset_from_tmap(tmap_data: bytes) -> Tuple[float, float]:
     return gainmapmax, (offset_1 + offset_2) / 2.0
 
 
+def _select_grid_layout(
+    tile_count: int,
+    tile_size: int,
+    real_width: Optional[int] = None,
+    real_height: Optional[int] = None,
+) -> Tuple[int, int]:
+    """Select the tile grid that best matches the real image dimensions."""
+    candidates = []
+
+    for cols in range(1, tile_count + 1):
+        if tile_count % cols != 0:
+            continue
+
+        rows = tile_count // cols
+        canvas_w = cols * tile_size
+        canvas_h = rows * tile_size
+
+        if real_width is not None and canvas_w < real_width:
+            continue
+        if real_height is not None and canvas_h < real_height:
+            continue
+
+        if real_width is not None and real_height is not None:
+            aspect_error = abs((canvas_w / canvas_h) - (real_width / real_height))
+            wasted_pixels = (canvas_w * canvas_h) - (real_width * real_height)
+            orientation_mismatch = int(
+                (canvas_w >= canvas_h) != (real_width >= real_height)
+            )
+        else:
+            aspect_error = abs(cols - rows)
+            wasted_pixels = canvas_w * canvas_h
+            orientation_mismatch = 0
+
+        candidates.append(
+            (
+                orientation_mismatch,
+                wasted_pixels,
+                aspect_error,
+                abs(cols - rows),
+                cols,
+                rows,
+            )
+        )
+
+    if candidates:
+        _, _, _, _, cols, rows = min(candidates)
+        return cols, rows
+
+    raise ValueError(f"Unable to infer grid layout for tile_count={tile_count}")
+
+
 def _detect_grid_parameters(
-    tile_count: int, first_tile_path: str
+    tile_count: int,
+    first_tile_path: str,
+    real_width: Optional[int] = None,
+    real_height: Optional[int] = None,
 ) -> Tuple[int, int, int]:
     """Auto-detect grid layout and tile size from the first tile.
 
@@ -224,23 +318,13 @@ def _detect_grid_parameters(
     first_tile = Image.open(first_tile_path)
     tile_size = first_tile.width  # Assume square tiles
 
-    # Common iOS grid layouts based on tile count
-    if tile_count == 15:
-        return 3, 5, tile_size
-    elif tile_count == 12:
-        return 3, 4, tile_size
-    elif tile_count == 6:
-        return 2, 3, tile_size
-    else:
-        # Try to find the best fit
-        import math
-
-        sqrt_n = int(math.sqrt(tile_count))
-        for cols in range(sqrt_n, 0, -1):
-            if tile_count % cols == 0:
-                rows = tile_count // cols
-                return cols, rows, tile_size
-        return tile_count, 1, tile_size
+    grid_cols, grid_rows = _select_grid_layout(
+        tile_count,
+        tile_size,
+        real_width=real_width,
+        real_height=real_height,
+    )
+    return grid_cols, grid_rows, tile_size
 
 
 def read_ios_hdr_screenshot(
@@ -319,7 +403,13 @@ def read_ios_hdr_screenshot(
         main_ids = groups[0]
         gainmap_ids = groups[1]
 
-        # Auto-detect grid parameters if not provided
+        # Get original resolution from HEIC metadata if not provided.
+        if real_width is None or real_height is None:
+            orig_width, orig_height = _get_original_resolution(filepath)
+            real_width = real_width or orig_width
+            real_height = real_height or orig_height
+
+        # Auto-detect grid parameters after original resolution is known.
         if grid_cols is None or grid_rows is None:
             # Extract first tile to detect size
             first_id = main_ids[0]
@@ -339,7 +429,10 @@ def read_ios_hdr_screenshot(
             )
 
             detected_cols, detected_rows, detected_tile_size = _detect_grid_parameters(
-                len(main_ids), jpg_path
+                len(main_ids),
+                jpg_path,
+                real_width=real_width,
+                real_height=real_height,
             )
             grid_cols = grid_cols or detected_cols
             grid_rows = grid_rows or detected_rows
@@ -351,12 +444,6 @@ def read_ios_hdr_screenshot(
             if os.path.exists(jpg_path):
                 os.remove(jpg_path)
 
-        # Get original resolution from HEIC metadata if not provided
-        if real_width is None or real_height is None:
-            orig_width, orig_height = _get_original_resolution(filepath)
-            real_width = real_width or orig_width
-            real_height = real_height or orig_height
-
         # Process main image
         main_temp = os.path.join(temp_dir, "main")
         os.makedirs(main_temp, exist_ok=True)
@@ -367,8 +454,8 @@ def read_ios_hdr_screenshot(
             grid_cols,
             grid_rows,
             tile_size,
-            real_width or canvas_w,
-            real_height or canvas_h,
+            real_width,
+            real_height,
         )
 
         # Process gainmap
@@ -381,8 +468,8 @@ def read_ios_hdr_screenshot(
             grid_cols,
             grid_rows,
             tile_size,
-            real_width or canvas_w,
-            real_height or canvas_h,
+            real_width,
+            real_height,
         )
 
         # Parse tmap metadata
@@ -397,8 +484,8 @@ def read_ios_hdr_screenshot(
         metadata = GainmapMetadata(
             minimum_version=0,
             writer_version=0,
-            baseline_hdr_headroom=1.0,
-            alternate_hdr_headroom=float(2**gainmapmax),
+            baseline_hdr_headroom=0.0,
+            alternate_hdr_headroom=float(gainmapmax),
             is_multichannel=True,
             use_base_colour_space=True,
             gainmap_min=(0.0, 0.0, 0.0),
