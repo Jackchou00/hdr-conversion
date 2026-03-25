@@ -5,14 +5,14 @@ import hdrconv.io as io
 import hdrconv.convert as convert
 from hdrconv.core import HDRImage
 
-# baseline: pure blue in sRGB
-# alternate: pure red in Display P3
-
-
-with open("icc/sRGB2014.icc", "rb") as f:
-    p3_icc = f.read()
+# baseline: pure blue in P3
+# alternate: pure red in BT.2020
 
 with open("icc/Display P3.icc", "rb") as f:
+    p3_icc = f.read()
+
+# note: gainmap icc must include 'cicp' tag.
+with open("icc/ITU-R_BT2020-beta-cicp.icc", "rb") as f:
     bt2020_icc = f.read()
 
 image_width = 512
@@ -25,7 +25,7 @@ alternate_image[:, :, 0] = 1.0
 
 # convert baseline to bt.2020
 baseline_image_bt2020 = colour.RGB_to_RGB(
-    baseline_image, input_colourspace="sRGB", output_colourspace="Display P3"
+    baseline_image, input_colourspace="Display P3", output_colourspace="ITU-R BT.2020"
 )
 
 hdr_image: HDRImage = {
@@ -46,4 +46,4 @@ gainmap_full_image["baseline"] = baseline_image
 gainmap_full_image["baseline_icc"] = p3_icc
 gainmap_full_image["gainmap_icc"] = bt2020_icc
 
-io.write_21496(gainmap_full_image, "test_gainmap.jpg")
+io.write_21496(gainmap_full_image, "test_gainmap_cicp-srgb.jpg")
