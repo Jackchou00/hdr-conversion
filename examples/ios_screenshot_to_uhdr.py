@@ -17,8 +17,8 @@ from hdrconv.io import read_ios_hdr_screenshot, write_ultrahdr
 
 def main():
     # Input iOS HDR screenshot
-    input_path = "images/ioshdrscreenshot.HEIC"
-    output_path = "ios_to_uhdr_output.jpg"
+    input_path = "/Users/jackchou/Desktop/UI/IMG_0249.HEIC"
+    output_path = input_path.replace(".HEIC", ".jpg")
     icc_path = "icc/Display P3.icc"
 
     print(f"Reading iOS HDR screenshot: {input_path}")
