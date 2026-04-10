@@ -5,42 +5,54 @@ This example demonstrates the new direct API for converting
 between HDR formats with full control over each step.
 """
 
+import argparse
+
 import hdrconv.io as io
 import hdrconv.convert as convert
 
 import colour
 
-# Step 1: Read ISO 21496-1 Gainmap JPEG
-print("Reading ISO 21496-1 file...")
-gainmap_data = io.read_21496("images/iso21496.jpg")
+def main():
+    parser = argparse.ArgumentParser(description=__doc__.strip().splitlines()[0])
+    parser.add_argument("input_path", help="Input ISO 21496-1 JPEG")
+    parser.add_argument("output_path", help="PQ AVIF output")
+    args = parser.parse_args()
 
-print(f"  Baseline shape: {gainmap_data['baseline'].shape}")
-print(f"  Gainmap shape: {gainmap_data['gainmap'].shape}")
-print(f"  Metadata: {gainmap_data['metadata']}")
+    # Step 1: Read ISO 21496-1 Gainmap JPEG
+    print("Reading ISO 21496-1 file...")
+    gainmap_data = io.read_21496(args.input_path)
 
-# Step 2: Convert Gainmap to linear HDR
-print("\nConverting Gainmap to linear HDR...")
-hdr = convert.gainmap_to_hdr(gainmap_data)
+    print(f"  Baseline shape: {gainmap_data['baseline'].shape}")
+    print(f"  Gainmap shape: {gainmap_data['gainmap'].shape}")
+    print(f"  Metadata: {gainmap_data['metadata']}")
 
-print(f"  HDR shape: {hdr['data'].shape}")
-print(f"  HDR dtype: {hdr['data'].dtype}")
-print(f"  Value range: [{hdr['data'].min():.4f}, {hdr['data'].max():.4f}]")
+    # Step 2: Convert Gainmap to linear HDR
+    print("\nConverting Gainmap to linear HDR...")
+    hdr = convert.gainmap_to_hdr(gainmap_data)
 
-# Step 3: Apply PQ transfer function
-print("\nApplying PQ transfer function...")
-pq_encoded = colour.eotf_inverse(hdr["data"] * 203.0, function="ITU-R BT.2100 PQ")
+    print(f"  HDR shape: {hdr['data'].shape}")
+    print(f"  HDR dtype: {hdr['data'].dtype}")
+    print(f"  Value range: [{hdr['data'].min():.4f}, {hdr['data'].max():.4f}]")
 
-print(f"  PQ range: [{pq_encoded.min():.4f}, {pq_encoded.max():.4f}]")
+    # Step 3: Apply PQ transfer function
+    print("\nApplying PQ transfer function...")
+    pq_encoded = colour.eotf_inverse(hdr["data"] * 203.0, function="ITU-R BT.2100 PQ")
 
-# Step 4: Write as ISO 22028-5 PQ AVIF
-print("\nWriting PQ AVIF...")
-pq_data = {
-    "data": pq_encoded,
-    "color_space": "bt2020",
-    "transfer_function": "pq",
-    "icc_profile": None,
-}
-io.write_22028_pq(pq_data, "output_from_21496.avif")
+    print(f"  PQ range: [{pq_encoded.min():.4f}, {pq_encoded.max():.4f}]")
 
-print("✓ Conversion complete!")
-print("\nOutput: output_from_21496.avif")
+    # Step 4: Write as ISO 22028-5 PQ AVIF
+    print("\nWriting PQ AVIF...")
+    pq_data = {
+        "data": pq_encoded,
+        "color_space": "bt2020",
+        "transfer_function": "pq",
+        "icc_profile": None,
+    }
+    io.write_22028_pq(pq_data, args.output_path)
+
+    print("✓ Conversion complete!")
+    print(f"\nOutput: {args.output_path}")
+
+
+if __name__ == "__main__":
+    main()
