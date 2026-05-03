@@ -507,6 +507,8 @@ def read_ios_hdr_screenshot(
             metadata=metadata,
             baseline_icc=None,
             gainmap_icc=None,
+            baseline_bit_depth=10,
+            gainmap_bit_depth=10,
         )
 
     finally:

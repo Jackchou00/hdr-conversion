@@ -393,6 +393,8 @@ def read_ultrahdr(filepath: str) -> GainmapImage:
         metadata=metadata,
         baseline_icc=base_icc,
         gainmap_icc=gain_icc,
+        baseline_bit_depth=8,
+        gainmap_bit_depth=8,
     )
 
 

@@ -16,12 +16,18 @@ from hdrconv.core import GainmapImage
 
 
 import io
+import shutil
 import struct
+import subprocess
+import tempfile
 import warnings
+import xml.etree.ElementTree as ET
 from fractions import Fraction
+from pathlib import Path
 from typing import Any, Dict, Generator, List, Optional, Tuple
 
 import numpy as np
+import pillow_heif
 from PIL import Image
 
 # -----------------------------------------------------------------------------
@@ -37,6 +43,8 @@ MPF_LABEL = b"MPF\x00"
 # ISO 21496-1 Signature in APP2
 ISO21496_URN = b"urn:iso:std:iso:ts:21496:-1\x00"
 ISO21496_URN_ALT = b"urn:iso:std:iso:ts:21496:-1"  # Some writers omit null
+JPEG_21496_EXTENSIONS = {".jpg", ".jpeg", ".jpe"}
+ISOBMFF_21496_EXTENSIONS = {".heic", ".heif", ".hif", ".avif", ".avifs"}
 
 # -----------------------------------------------------------------------------
 # Helper: JPEG Segment Parsing
@@ -365,40 +373,49 @@ def _read_rational(data: bytes, offset: int, signed: bool = False) -> float:
     return num / den if den != 0 else 0.0
 
 
-def _coerce_channel_values(
-    values: Any, field_name: str, default: Tuple[float, ...]
-) -> Tuple[float, ...]:
-    if values is None:
-        seq = default
-    elif isinstance(values, (int, float, np.integer, np.floating)):
-        seq = (float(values),)
-    else:
-        seq = tuple(float(v) for v in values)
-
-    if len(seq) not in (1, 3):
-        raise ValueError(
-            f"Invalid {field_name}: expected 1 or 3 values, got {len(seq)}."
-        )
-    return seq
+def _has_iso21496_urn(payload: bytes) -> bool:
+    return payload.startswith(ISO21496_URN) or payload.startswith(ISO21496_URN_ALT)
 
 
-def _to_triplet(values: Tuple[float, ...]) -> Tuple[float, float, float]:
-    if len(values) == 3:
-        return (values[0], values[1], values[2])
-    return (values[0], values[0], values[0])
-
-
-def _parse_iso21496_metadata(payload: bytes) -> Dict[str, Any]:
-    """Parses binary APP2 payload into the specified dictionary structure."""
-
-    # Skip URN
-    offset = 0
+def _strip_iso21496_urn(payload: bytes) -> tuple[bytes, bool]:
     if payload.startswith(ISO21496_URN):
-        offset = len(ISO21496_URN)
-    elif payload.startswith(ISO21496_URN_ALT):
-        offset = len(ISO21496_URN_ALT)
-    else:
-        raise ValueError("Invalid ISO 21496 signature")
+        return payload[len(ISO21496_URN) :], True
+    if payload.startswith(ISO21496_URN_ALT):
+        return payload[len(ISO21496_URN_ALT) :], True
+    return payload, False
+
+
+def _expected_iso21496_binary_length(payload: bytes) -> int:
+    if len(payload) < 5:
+        raise ValueError(
+            f"ISO 21496-1 metadata too short: expected at least 5 bytes, got {len(payload)}."
+        )
+    flags = payload[4]
+    channel_count = 3 if ((flags >> 7) & 1) else 1
+    return 5 + 16 + (channel_count * 40)
+
+
+def _iter_iso21496_binary_candidates(payload: bytes) -> Generator[bytes, None, None]:
+    body, had_urn = _strip_iso21496_urn(payload)
+    yield body
+
+    # HEIF/AVIF tmap payloads may include a leading one-byte version marker
+    # before the standard ISO 21496-1 metadata block. JPEG APP2 payloads do not.
+    if not had_urn and len(body) > 1:
+        yield body[1:]
+
+
+def _parse_iso21496_binary_payload(payload: bytes) -> Dict[str, Any]:
+    """Parse the standard ISO 21496-1 binary metadata block."""
+
+    expected_length = _expected_iso21496_binary_length(payload)
+    if len(payload) != expected_length:
+        raise ValueError(
+            "Invalid ISO 21496-1 metadata length: "
+            f"expected {expected_length} bytes, got {len(payload)}."
+        )
+
+    offset = 0
 
     # Header
     min_ver, writer_ver, flags = struct.unpack_from(">HHB", payload, offset)
@@ -454,6 +471,510 @@ def _parse_iso21496_metadata(payload: bytes) -> Dict[str, Any]:
         "gainmap_max": get_channel_values("max"),
         "gainmap_gamma": get_channel_values("gamma"),
     }
+
+
+def _coerce_channel_values(
+    values: Any, field_name: str, default: Tuple[float, ...]
+) -> Tuple[float, ...]:
+    if values is None:
+        seq = default
+    elif isinstance(values, (int, float, np.integer, np.floating)):
+        seq = (float(values),)
+    else:
+        seq = tuple(float(v) for v in values)
+
+    if len(seq) not in (1, 3):
+        raise ValueError(
+            f"Invalid {field_name}: expected 1 or 3 values, got {len(seq)}."
+        )
+    return seq
+
+
+def _to_triplet(values: Tuple[float, ...]) -> Tuple[float, float, float]:
+    if len(values) == 3:
+        return (values[0], values[1], values[2])
+    return (values[0], values[0], values[0])
+
+
+def _parse_iso21496_metadata(payload: bytes) -> Dict[str, Any]:
+    """Parse ISO 21496-1 metadata from JPEG APP2 or raw HEIF/AVIF tmap bytes."""
+
+    last_error: Exception | None = None
+    for candidate in _iter_iso21496_binary_candidates(payload):
+        try:
+            return _parse_iso21496_binary_payload(candidate)
+        except (ValueError, struct.error) as e:
+            last_error = e
+
+    raise ValueError("Invalid ISO 21496-1 metadata payload.") from last_error
+
+
+def _find_iso21496_metadata(
+    segment_groups: List[List[Tuple[int, bytes]]],
+) -> Optional[Dict[str, Any]]:
+    for segments in segment_groups:
+        for code, payload in segments:
+            if code != APP2 or not _has_iso21496_urn(payload):
+                continue
+            try:
+                return _parse_iso21496_metadata(payload)
+            except ValueError:
+                continue
+    return None
+
+
+def _check_mp4box_installed() -> None:
+    if shutil.which("MP4Box") is None:
+        raise RuntimeError(
+            "MP4Box is not installed or not found in PATH. "
+            "Please install GPAC and ensure MP4Box is available."
+        )
+
+
+def _run_mp4box(args: list[str]) -> subprocess.CompletedProcess[str]:
+    result = subprocess.run(args, capture_output=True, text=True)
+    if result.returncode != 0:
+        detail = (result.stderr or result.stdout).strip()
+        raise RuntimeError(f"MP4Box command failed: {' '.join(args)}\n{detail}")
+    return result
+
+
+def _dump_isobmff_item_bytes(filepath: str, item_id: int, temp_dir: str) -> bytes:
+    output_path = Path(temp_dir) / f"item_{item_id}.bin"
+    param = f"{item_id}:path={output_path}"
+    _run_mp4box(["MP4Box", "-dump-item", param, filepath])
+
+    if not output_path.exists():
+        raise RuntimeError(f"MP4Box did not dump item {item_id} from {filepath}.")
+
+    return output_path.read_bytes()
+
+
+def _check_ffmpeg_installed() -> None:
+    missing = [
+        tool for tool in ("ffmpeg", "ffprobe") if shutil.which(tool) is None
+    ]
+    if missing:
+        raise RuntimeError(
+            f"Missing required external tools: {', '.join(missing)}. "
+            "Please install FFmpeg and ensure ffmpeg/ffprobe are available."
+        )
+
+
+def _local_xml_tag(tag: str) -> str:
+    return tag.rsplit("}", 1)[-1]
+
+
+def _parse_isobmff_structure(filepath: str, temp_dir: str) -> dict[str, Any]:
+    xml_path = Path(temp_dir) / "isobmff_info.xml"
+    _run_mp4box(["MP4Box", "-diso", filepath, "-out", str(xml_path)])
+
+    root = ET.parse(xml_path).getroot()
+    namespace = ""
+    if root.tag.startswith("{"):
+        namespace = root.tag.split("}", 1)[0][1:]
+    ns = {"m": namespace} if namespace else {}
+    prefix = ".//m:" if namespace else ".//"
+    child_prefix = "./m:" if namespace else "./"
+
+    primary_box = root.find(f"{prefix}PrimaryItemBox", ns)
+    primary_id = (
+        int(primary_box.attrib["item_ID"]) if primary_box is not None else None
+    )
+
+    items: dict[int, dict[str, Any]] = {}
+    for entry in root.findall(f"{prefix}ItemInfoEntryBox", ns):
+        item_id = int(entry.attrib["item_ID"])
+        flags = int(entry.attrib.get("Flags", "0"))
+        items[item_id] = {
+            "type": entry.attrib.get("item_type"),
+            "flags": flags,
+            "hidden": bool(flags & 1),
+            "content_type": entry.attrib.get("content_type"),
+            "name": entry.attrib.get("item_name"),
+        }
+
+    refs: dict[tuple[str, int], list[int]] = {}
+    for ref in root.findall(f"{prefix}ItemReferenceBox", ns):
+        ref_type = ref.attrib.get("Type")
+        from_item_id = ref.attrib.get("from_item_id")
+        if not from_item_id or ref_type == "iref":
+            continue
+        refs[(ref_type, int(from_item_id))] = [
+            int(entry.attrib["ItemID"])
+            for entry in ref.findall(f"{child_prefix}ItemReferenceBoxEntry", ns)
+        ]
+
+    groups: list[tuple[str, int, list[int]]] = []
+    for group in root.findall(f"{prefix}EntityToGroupTypeBox", ns):
+        groups.append(
+            (
+                group.attrib.get("Type", ""),
+                int(group.attrib.get("group_id", "0")),
+                [
+                    int(entry.attrib["EntityID"])
+                    for entry in group.findall(
+                        f"{child_prefix}EntityToGroupTypeBoxEntry", ns
+                    )
+                ],
+            )
+        )
+
+    properties: list[tuple[str, dict[str, str], list[int]]] = []
+    property_container = root.find(f"{prefix}ItemPropertyContainerBox", ns)
+    if property_container is not None:
+        for child in property_container:
+            bits = [
+                int(bit.attrib["bits_per_channel"])
+                for bit in child.findall(f"{child_prefix}BitPerChannel", ns)
+            ]
+            properties.append((_local_xml_tag(child.tag), child.attrib, bits))
+
+    associations: dict[int, list[int]] = {}
+    for entry in root.findall(f"{prefix}AssociationEntry", ns):
+        item_id = int(entry.attrib["item_ID"])
+        associations[item_id] = [
+            int(prop.attrib["index"])
+            for prop in entry.findall(f"{child_prefix}Property", ns)
+        ]
+
+    return {
+        "primary_id": primary_id,
+        "items": items,
+        "refs": refs,
+        "groups": groups,
+        "properties": properties,
+        "associations": associations,
+    }
+
+
+def _get_isobmff_item_property(
+    structure: dict[str, Any], item_id: int, property_type: str
+) -> Optional[tuple[dict[str, str], list[int]]]:
+    properties = structure["properties"]
+    for property_index in structure["associations"].get(item_id, []):
+        if not 1 <= property_index <= len(properties):
+            continue
+        tag, attrs, bits = properties[property_index - 1]
+        if tag == property_type:
+            return attrs, bits
+    return None
+
+
+def _get_isobmff_item_bit_depth(
+    structure: dict[str, Any], item_id: int
+) -> Optional[int]:
+    prop = _get_isobmff_item_property(structure, item_id, "PixelInformationPropertyBox")
+    if prop is None:
+        return None
+    _, bits = prop
+    return max(bits) if bits else None
+
+
+def _require_isobmff_item_bit_depth(
+    structure: dict[str, Any], item_id: int, field_name: str
+) -> int:
+    bit_depth = _get_isobmff_item_bit_depth(structure, item_id)
+    if bit_depth is None:
+        raise ValueError(
+            f"Missing bit depth for {field_name} item {item_id} in ISOBMFF properties."
+        )
+    return bit_depth
+
+
+def _get_isobmff_item_channel_count(structure: dict[str, Any], item_id: int) -> int:
+    prop = _get_isobmff_item_property(structure, item_id, "PixelInformationPropertyBox")
+    if prop is None:
+        return 3
+    _, bits = prop
+    if len(bits) in (1, 3, 4):
+        return len(bits)
+    return 3
+
+
+def _select_isobmff_tmap_items(
+    structure: dict[str, Any],
+) -> list[tuple[int, int, int]]:
+    selected = []
+    items = structure["items"]
+    refs = structure["refs"]
+    altr_groups = [entities for group_type, _, entities in structure["groups"] if group_type == "altr"]
+
+    for tmap_id, info in items.items():
+        if info.get("type") != "tmap":
+            continue
+        derived_items = refs.get(("dimg", tmap_id), [])
+        if len(derived_items) < 2:
+            continue
+        baseline_id, gainmap_id = derived_items[:2]
+
+        # altr should contain tmap and baseline. Treat it as validation when present.
+        if altr_groups and not any(
+            tmap_id in group and baseline_id in group for group in altr_groups
+        ):
+            continue
+
+        selected.append((tmap_id, baseline_id, gainmap_id))
+
+    return selected
+
+
+def _align_uint16_to_bit_depth(arr: np.ndarray, bit_depth: Optional[int]) -> np.ndarray:
+    if bit_depth is None or bit_depth >= 16:
+        return arr
+
+    max_value = (1 << bit_depth) - 1
+    if arr.size == 0 or int(arr.max()) <= max_value:
+        return arr
+
+    shift = 16 - bit_depth
+    return (arr >> shift).astype(np.uint16, copy=False)
+
+
+def _heif_image_to_array(image: Any, bit_depth: Optional[int] = None) -> np.ndarray:
+    width, height = image.size
+    mode = image.mode
+
+    if mode == "RGB":
+        row_bytes = width * 3
+        return (
+            np.frombuffer(image.data, dtype=np.uint8)
+            .reshape(height, image.stride)[:, :row_bytes]
+            .reshape(height, width, 3)
+            .copy()
+        )
+    if mode == "L":
+        return (
+            np.frombuffer(image.data, dtype=np.uint8)
+            .reshape(height, image.stride)[:, :width]
+            .reshape(height, width, 1)
+            .copy()
+        )
+    if mode == "RGBA":
+        row_bytes = width * 4
+        return (
+            np.frombuffer(image.data, dtype=np.uint8)
+            .reshape(height, image.stride)[:, :row_bytes]
+            .reshape(height, width, 4)[:, :, :3]
+            .copy()
+        )
+    if mode == "RGB;16":
+        row_samples = width * 3
+        arr = (
+            np.frombuffer(image.data, dtype=np.uint16)
+            .reshape(height, image.stride // 2)[:, :row_samples]
+            .reshape(height, width, 3)
+            .copy()
+        )
+        return _align_uint16_to_bit_depth(arr, bit_depth)
+    if mode == "L;16":
+        arr = (
+            np.frombuffer(image.data, dtype=np.uint16)
+            .reshape(height, image.stride // 2)[:, :width]
+            .reshape(height, width, 1)
+            .copy()
+        )
+        return _align_uint16_to_bit_depth(arr, bit_depth)
+
+    raise ValueError(f"Unsupported HEIF image mode: {mode}")
+
+
+def _read_isobmff_primary_image(
+    filepath: str, bit_depth: Optional[int]
+) -> tuple[np.ndarray, Optional[bytes], int]:
+    heif_file = pillow_heif.read_heif(filepath, convert_hdr_to_8bit=False)
+    actual_bit_depth = bit_depth
+    if actual_bit_depth is None:
+        decoder_bit_depth = heif_file.info.get("bit_depth")
+        if decoder_bit_depth is not None:
+            actual_bit_depth = int(decoder_bit_depth)
+    if actual_bit_depth is None:
+        raise ValueError(f"Missing decoder bit depth for primary image: {filepath}")
+
+    return (
+        _heif_image_to_array(heif_file, actual_bit_depth),
+        heif_file.info.get("icc_profile"),
+        actual_bit_depth,
+    )
+
+
+def _try_read_isobmff_aux_image(
+    filepath: str, item_id: int, bit_depth: int
+) -> Optional[np.ndarray]:
+    heif_file = pillow_heif.read_heif(filepath, convert_hdr_to_8bit=False)
+    aux_items = heif_file.info.get("aux", {})
+    if not any(item_id in ids for ids in aux_items.values()):
+        return None
+
+    aux_image = heif_file.get_aux_image(item_id)
+    return _heif_image_to_array(aux_image, bit_depth)
+
+
+def _probe_video_item(path: str) -> tuple[int, int, str]:
+    result = subprocess.run(
+        [
+            "ffprobe",
+            "-v",
+            "error",
+            "-select_streams",
+            "v:0",
+            "-show_entries",
+            "stream=width,height,pix_fmt",
+            "-of",
+            "csv=p=0",
+            path,
+        ],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    width, height, pix_fmt = result.stdout.strip().split(",")
+    return int(width), int(height), pix_fmt
+
+
+def _select_rawvideo_pix_fmt(channel_count: int, bit_depth: int) -> str:
+    if channel_count == 1:
+        if bit_depth <= 8:
+            return "gray"
+        return f"gray{bit_depth}le"
+    if bit_depth <= 8:
+        return "rgb24"
+    return f"gbrp{bit_depth}le"
+
+
+def _decode_video_item_to_array(
+    path: str,
+    channel_count: int,
+    bit_depth: int,
+) -> np.ndarray:
+    width, height, _ = _probe_video_item(path)
+    pix_fmt = _select_rawvideo_pix_fmt(channel_count, bit_depth)
+    result = subprocess.run(
+        [
+            "ffmpeg",
+            "-hide_banner",
+            "-loglevel",
+            "error",
+            "-i",
+            path,
+            "-frames:v",
+            "1",
+            "-f",
+            "rawvideo",
+            "-pix_fmt",
+            pix_fmt,
+            "-",
+        ],
+        capture_output=True,
+        check=True,
+    )
+
+    if pix_fmt == "gray":
+        return (
+            np.frombuffer(result.stdout, dtype=np.uint8)
+            .reshape(height, width, 1)
+            .copy()
+        )
+    if pix_fmt.startswith("gray") and pix_fmt.endswith("le"):
+        return (
+            np.frombuffer(result.stdout, dtype=np.uint16)
+            .reshape(height, width, 1)
+            .copy()
+        )
+    if pix_fmt == "rgb24":
+        return (
+            np.frombuffer(result.stdout, dtype=np.uint8)
+            .reshape(height, width, 3)
+            .copy()
+        )
+    if pix_fmt.startswith("gbrp") and pix_fmt.endswith("le"):
+        planes = np.frombuffer(result.stdout, dtype=np.uint16).reshape(
+            3, height, width
+        )
+        return np.stack([planes[2], planes[0], planes[1]], axis=-1).copy()
+
+    raise ValueError(f"Unsupported rawvideo pixel format: {pix_fmt}")
+
+
+def _parse_grid_item_payload(data: bytes) -> tuple[int, int, int, int]:
+    if len(data) != 8:
+        raise ValueError(f"Unsupported grid item payload length: {len(data)}")
+
+    rows = data[2] + 1
+    cols = data[3] + 1
+    width = int.from_bytes(data[4:6], "big")
+    height = int.from_bytes(data[6:8], "big")
+    return rows, cols, width, height
+
+
+def _read_isobmff_grid_image(
+    filepath: str,
+    item_id: int,
+    structure: dict[str, Any],
+    temp_dir: str,
+) -> np.ndarray:
+    _check_ffmpeg_installed()
+
+    tile_ids = structure["refs"].get(("dimg", item_id), [])
+    if not tile_ids:
+        raise ValueError(f"Grid image item {item_id} has no dimg tile references.")
+
+    grid_data = _dump_isobmff_item_bytes(filepath, item_id, temp_dir)
+    rows, cols, output_width, output_height = _parse_grid_item_payload(grid_data)
+    if rows * cols != len(tile_ids):
+        raise ValueError(
+            f"Grid item {item_id} expects {rows * cols} tiles, got {len(tile_ids)}."
+        )
+
+    channel_count = _get_isobmff_item_channel_count(structure, item_id)
+    bit_depth = _require_isobmff_item_bit_depth(structure, item_id, "grid")
+    tile_arrays = []
+
+    for tile_id in tile_ids:
+        tile_path = Path(temp_dir) / f"tile_{tile_id}.bitstream"
+        param = f"{tile_id}:path={tile_path}"
+        _run_mp4box(["MP4Box", "-dump-item", param, filepath])
+        tile_arrays.append(
+            _decode_video_item_to_array(str(tile_path), channel_count, bit_depth)
+        )
+
+    tile_height, tile_width = tile_arrays[0].shape[:2]
+    channels = tile_arrays[0].shape[2]
+    canvas = np.zeros(
+        (rows * tile_height, cols * tile_width, channels),
+        dtype=tile_arrays[0].dtype,
+    )
+
+    for index, tile in enumerate(tile_arrays):
+        row = index // cols
+        col = index % cols
+        y = row * tile_height
+        x = col * tile_width
+        canvas[y : y + tile_height, x : x + tile_width] = tile
+
+    return canvas[:output_height, :output_width].copy()
+
+
+def _read_isobmff_item_image(
+    filepath: str,
+    item_id: int,
+    structure: dict[str, Any],
+    temp_dir: str,
+) -> np.ndarray:
+    item = structure["items"].get(item_id)
+    if item is None:
+        raise ValueError(f"Image item {item_id} not found.")
+
+    item_type = item.get("type")
+    if item_type == "grid":
+        return _read_isobmff_grid_image(filepath, item_id, structure, temp_dir)
+
+    item_path = Path(temp_dir) / f"image_item_{item_id}.bitstream"
+    param = f"{item_id}:path={item_path}"
+    _run_mp4box(["MP4Box", "-dump-item", param, filepath])
+    channel_count = _get_isobmff_item_channel_count(structure, item_id)
+    bit_depth = _require_isobmff_item_bit_depth(structure, item_id, "image")
+    return _decode_video_item_to_array(str(item_path), channel_count, bit_depth)
 
 
 def _encode_iso21496_metadata(meta: Dict[str, Any]) -> bytes:
@@ -728,7 +1249,7 @@ def _calculate_mpf_offsets(
 # -----------------------------------------------------------------------------
 
 
-def read_21496(filepath: str) -> GainmapImage:
+def _read_21496_jpeg(filepath: str) -> GainmapImage:
     """Read ISO 21496-1 Gainmap JPEG file.
 
     Parses a JPEG file containing an ISO 21496-1 compliant gainmap with
@@ -790,18 +1311,8 @@ def read_21496(filepath: str) -> GainmapImage:
     base_icc = _extract_icc(base_segments)
     gain_icc = _extract_icc(gain_segments)
 
-    iso_meta = None
-
     # Search for ISO 21496 metadata (Prioritize Gainmap stream)
-    for segments in [gain_segments, base_segments]:
-        for code, payload in segments:
-            if code == APP2 and (
-                payload.startswith(ISO21496_URN) or payload.startswith(ISO21496_URN_ALT)
-            ):
-                iso_meta = _parse_iso21496_metadata(payload)
-                break
-        if iso_meta:
-            break
+    iso_meta = _find_iso21496_metadata([gain_segments, base_segments])
 
     if not iso_meta:
         raise ValueError("ISO 21496-1 metadata segment not found.")
@@ -812,7 +1323,106 @@ def read_21496(filepath: str) -> GainmapImage:
         metadata=iso_meta,
         baseline_icc=base_icc,
         gainmap_icc=gain_icc,
+        baseline_bit_depth=8,
+        gainmap_bit_depth=8,
     )
+
+
+def _read_21496_isobmff(filepath: str) -> GainmapImage:
+    """Read ISO 21496-1 Gainmap HEIF/AVIF file."""
+    _check_mp4box_installed()
+
+    last_error: Exception | None = None
+    with tempfile.TemporaryDirectory(prefix="hdrconv_21496_") as temp_dir:
+        structure = _parse_isobmff_structure(filepath, temp_dir)
+        tmap_items = _select_isobmff_tmap_items(structure)
+        if not tmap_items:
+            raise ValueError(
+                f"No tmap item with baseline/gainmap dimg references found: {filepath}"
+            )
+
+        for tmap_id, baseline_id, gainmap_id in tmap_items:
+            try:
+                tmap_data = _dump_isobmff_item_bytes(filepath, tmap_id, temp_dir)
+                metadata = _parse_iso21496_metadata(tmap_data)
+                baseline_bit_depth = _get_isobmff_item_bit_depth(
+                    structure, baseline_id
+                )
+                gainmap_bit_depth = _require_isobmff_item_bit_depth(
+                    structure, gainmap_id, "gainmap"
+                )
+
+                if baseline_id == structure["primary_id"]:
+                    (
+                        baseline,
+                        baseline_icc,
+                        baseline_bit_depth,
+                    ) = _read_isobmff_primary_image(filepath, baseline_bit_depth)
+                else:
+                    baseline_bit_depth = _require_isobmff_item_bit_depth(
+                        structure, baseline_id, "baseline"
+                    )
+                    baseline = _read_isobmff_item_image(
+                        filepath, baseline_id, structure, temp_dir
+                    )
+                    baseline_icc = None
+
+                gainmap = _try_read_isobmff_aux_image(
+                    filepath, gainmap_id, gainmap_bit_depth
+                )
+                if gainmap is None:
+                    gainmap = _read_isobmff_item_image(
+                        filepath, gainmap_id, structure, temp_dir
+                    )
+
+                return GainmapImage(
+                    baseline=baseline,
+                    gainmap=gainmap,
+                    metadata=metadata,
+                    baseline_icc=baseline_icc,
+                    gainmap_icc=None,
+                    baseline_bit_depth=baseline_bit_depth,
+                    gainmap_bit_depth=gainmap_bit_depth,
+                )
+            except (RuntimeError, ValueError, struct.error) as e:
+                last_error = e
+
+    raise ValueError(
+        f"No parseable ISO 21496-1 tmap metadata found in HEIF/AVIF container: {filepath}"
+    ) from last_error
+
+
+def _detect_21496_container(filepath: str) -> str:
+    suffix = Path(filepath).suffix.lower()
+    if suffix in JPEG_21496_EXTENSIONS:
+        return "jpeg"
+    if suffix in ISOBMFF_21496_EXTENSIONS:
+        return "isobmff"
+
+    with open(filepath, "rb") as f:
+        header = f.read(12)
+
+    if header.startswith(SOI):
+        return "jpeg"
+    if len(header) >= 12 and header[4:8] == b"ftyp":
+        return "isobmff"
+
+    raise ValueError(f"Unsupported ISO 21496-1 container format: {filepath}")
+
+
+def read_21496(filepath: str) -> GainmapImage:
+    """Read an ISO 21496-1 Gainmap image.
+
+    Routes JPEG files to the MPF parser and HEIF/AVIF files to the ISOBMFF
+    parser.
+    """
+    container = _detect_21496_container(filepath)
+    if container == "jpeg":
+        return _read_21496_jpeg(filepath)
+    if container == "isobmff":
+        return _read_21496_isobmff(filepath)
+
+    raise ValueError(f"Unsupported ISO 21496-1 container format: {filepath}")
 
 
 def write_21496(

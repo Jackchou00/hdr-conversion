@@ -62,11 +62,13 @@ class GainmapImage(TypedDict):
     Contains the baseline image, gainmap, and metadata.
 
     Attributes:
-        baseline: numpy array, uint8, shape (H, W, 3), range [0, 255].
-        gainmap: numpy array, uint8, shape (H, W, 3) or (H, W, 1), range [0, 255].
+        baseline: numpy array, shape (H, W, 3).
+        gainmap: numpy array, shape (H, W, 3) or (H, W, 1).
         metadata: GainmapMetadata dict containing transformation parameters.
         baseline_icc: Optional ICC profile bytes for baseline image color space.
         gainmap_icc: Optional ICC profile bytes for gainmap color space.
+        baseline_bit_depth: Optional integer sample bit depth read from the source file.
+        gainmap_bit_depth: Optional integer sample bit depth read from the source file.
     """
 
     baseline: np.ndarray
@@ -74,6 +76,8 @@ class GainmapImage(TypedDict):
     metadata: GainmapMetadata
     baseline_icc: Optional[bytes]
     gainmap_icc: Optional[bytes]
+    baseline_bit_depth: NotRequired[int]
+    gainmap_bit_depth: NotRequired[int]
 
 
 class HDRImage(TypedDict):

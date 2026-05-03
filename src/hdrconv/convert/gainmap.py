@@ -16,7 +16,7 @@ from __future__ import annotations
 from typing import Optional
 import warnings
 
-from PIL import Image
+import cv2
 import numpy as np
 
 with warnings.catch_warnings():
@@ -38,35 +38,52 @@ def _as_triplet(values: object, field_name: str) -> np.ndarray:
     )
 
 
-def _resize_gainmap_array(gainmap: np.ndarray, size: tuple[int, int]) -> np.ndarray:
-    gainmap_uint8 = np.clip(gainmap * 255.0, 0, 255).astype(np.uint8)
+def _normalize_sample_array(
+    arr: np.ndarray,
+    bit_depth: int | None,
+    field_name: str,
+) -> np.ndarray:
+    arr = np.asarray(arr)
 
-    if gainmap_uint8.ndim == 2:
-        pil_image = Image.fromarray(gainmap_uint8, mode="L")
-    elif gainmap_uint8.ndim == 3:
-        channel_count = gainmap_uint8.shape[2]
-        if channel_count == 1:
-            pil_image = Image.fromarray(gainmap_uint8[:, :, 0], mode="L")
-        elif channel_count == 3:
-            pil_image = Image.fromarray(gainmap_uint8, mode="RGB")
-        elif channel_count == 4:
-            pil_image = Image.fromarray(gainmap_uint8, mode="RGBA")
-        else:
-            pil_image = Image.fromarray(gainmap_uint8[:, :, 0], mode="L")
-    else:
+    if np.issubdtype(arr.dtype, np.floating):
+        return np.clip(arr.astype(np.float32), 0.0, 1.0)
+
+    if bit_depth is None:
+        raise ValueError(f"{field_name}_bit_depth is required for integer samples.")
+    if bit_depth <= 0:
+        raise ValueError(f"Invalid {field_name}_bit_depth: {bit_depth}.")
+
+    sample_max = (1 << bit_depth) - 1
+    return np.clip(arr.astype(np.float32) / float(sample_max), 0.0, 1.0)
+
+
+def _resize_gainmap_array(gainmap: np.ndarray, size: tuple[int, int]) -> np.ndarray:
+    gainmap = np.asarray(gainmap, dtype=np.float32)
+
+    if gainmap.ndim == 2:
+        gainmap = gainmap[:, :, np.newaxis]
+    elif gainmap.ndim != 3:
         raise ValueError(
-            f"Invalid gainmap shape for resize: expected 2D or 3D array, got {gainmap_uint8.shape}."
+            f"Invalid gainmap shape for resize: expected 2D or 3D array, got {gainmap.shape}."
         )
 
-    pil_image_resized = pil_image.resize(size, Image.BILINEAR)
-    gainmap_resized = np.array(pil_image_resized, dtype=np.float32) / 255.0
+    # Anti-aliasing prefilter from next-work/imresize_aa.py, intentionally disabled for now.
+    # h, w = gainmap.shape[:2]
+    # w2, h2 = size
+    # scale_x = w2 / w
+    # scale_y = h2 / h
+    # if scale_x < 1.0 or scale_y < 1.0:
+    #     sigma = 0.3 / min(scale_x, scale_y)
+    #     ksize = int(6 * sigma + 1)
+    #     if ksize % 2 == 0:
+    #         ksize += 1
+    #     gainmap = cv2.GaussianBlur(gainmap, (ksize, ksize), sigmaX=sigma)
 
-    if gainmap_resized.ndim == 2:
-        gainmap_resized = gainmap_resized[:, :, np.newaxis]
-    elif gainmap_resized.ndim == 3 and gainmap_resized.shape[2] == 4:
-        gainmap_resized = gainmap_resized[:, :, :3]
+    resized = cv2.resize(gainmap, dsize=size, interpolation=cv2.INTER_LANCZOS4)
+    if resized.ndim == 2:
+        resized = resized[:, :, np.newaxis]
 
-    return gainmap_resized
+    return resized.astype(np.float32, copy=False)
 
 
 def gainmap_to_hdr(
@@ -93,7 +110,9 @@ def gainmap_to_hdr(
     """
 
     # Linearize baseline
-    baseline = data["baseline"].astype(np.float32) / 255.0  # Normalize to [0, 1]
+    baseline = _normalize_sample_array(
+        data["baseline"], data.get("baseline_bit_depth"), "baseline"
+    )
     icc_source = data.get("baseline_icc")
     linear_baseline = None
     if icc_source:
@@ -104,7 +123,9 @@ def gainmap_to_hdr(
     if linear_baseline is None:
         linear_baseline = colour.eotf(baseline, function="sRGB")
 
-    gainmap = data["gainmap"].astype(np.float32) / 255.0
+    gainmap = _normalize_sample_array(
+        data["gainmap"], data.get("gainmap_bit_depth"), "gainmap"
+    )
     metadata = data["metadata"]
 
     # Resize gainmap to match baseline if needed
@@ -263,4 +284,6 @@ def hdr_to_gainmap(
         metadata=metadata,
         baseline_icc=icc_profile,
         gainmap_icc=icc_profile,
+        baseline_bit_depth=8,
+        gainmap_bit_depth=8,
     )
