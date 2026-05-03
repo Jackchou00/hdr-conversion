@@ -633,6 +633,28 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#hdrconv.core.GainmapImage.baseline_bit_depth" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        baseline_bit_depth
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#hdrconv.core.GainmapImage.gainmap_bit_depth" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        gainmap_bit_depth
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -1122,6 +1144,28 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#hdrconv.core.GainmapImage.baseline_bit_depth" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        baseline_bit_depth
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#hdrconv.core.GainmapImage.gainmap_bit_depth" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        gainmap_bit_depth
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -1498,11 +1542,7 @@ Represents the maximum brightness multiplier for HDR highlights.</p>
 
               <details class="mkdocstrings-source">
                 <summary>Source code in <code>src/hdrconv/core/types.py</code></summary>
-                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-108">108</a></span>
-<span class="normal"><a href="#__codelineno-0-109">109</a></span>
-<span class="normal"><a href="#__codelineno-0-110">110</a></span>
-<span class="normal"><a href="#__codelineno-0-111">111</a></span>
-<span class="normal"><a href="#__codelineno-0-112">112</a></span>
+                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-112">112</a></span>
 <span class="normal"><a href="#__codelineno-0-113">113</a></span>
 <span class="normal"><a href="#__codelineno-0-114">114</a></span>
 <span class="normal"><a href="#__codelineno-0-115">115</a></span>
@@ -1520,29 +1560,33 @@ Represents the maximum brightness multiplier for HDR highlights.</p>
 <span class="normal"><a href="#__codelineno-0-127">127</a></span>
 <span class="normal"><a href="#__codelineno-0-128">128</a></span>
 <span class="normal"><a href="#__codelineno-0-129">129</a></span>
-<span class="normal"><a href="#__codelineno-0-130">130</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__linenumbers__-0-108"><a id="__codelineno-0-108" name="__codelineno-0-108"></a><span class="k">class</span><span class="w"> </span><span class="nc">AppleHeicData</span><span class="p">(</span><span class="n">TypedDict</span><span class="p">):</span>
-</span><span id="__linenumbers__-0-109"><a id="__codelineno-0-109" name="__codelineno-0-109"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Apple HEIC HDR image data structure.</span>
-</span><span id="__linenumbers__-0-110"><a id="__codelineno-0-110" name="__codelineno-0-110"></a>
-</span><span id="__linenumbers__-0-111"><a id="__codelineno-0-111" name="__codelineno-0-111"></a><span class="sd">    Contains the base (SDR) image, single-channel gainmap, and headroom value</span>
-</span><span id="__linenumbers__-0-112"><a id="__codelineno-0-112" name="__codelineno-0-112"></a><span class="sd">    used by Apple&#39;s proprietary HDR gain map format in iPhone photos.</span>
-</span><span id="__linenumbers__-0-113"><a id="__codelineno-0-113" name="__codelineno-0-113"></a>
-</span><span id="__linenumbers__-0-114"><a id="__codelineno-0-114" name="__codelineno-0-114"></a><span class="sd">    The HDR reconstruction formula is:</span>
-</span><span id="__linenumbers__-0-115"><a id="__codelineno-0-115" name="__codelineno-0-115"></a><span class="sd">        hdr_rgb = sdr_rgb * (1.0 + (headroom - 1.0) * gainmap)</span>
-</span><span id="__linenumbers__-0-116"><a id="__codelineno-0-116" name="__codelineno-0-116"></a>
-</span><span id="__linenumbers__-0-117"><a id="__codelineno-0-117" name="__codelineno-0-117"></a><span class="sd">    Attributes:</span>
-</span><span id="__linenumbers__-0-118"><a id="__codelineno-0-118" name="__codelineno-0-118"></a><span class="sd">        base: numpy image array, uint8, shape (H, W, 3), range [0, 255].</span>
-</span><span id="__linenumbers__-0-119"><a id="__codelineno-0-119" name="__codelineno-0-119"></a><span class="sd">        gainmap: numpy array, uint8, shape (H, W, 1), range [0, 255].</span>
-</span><span id="__linenumbers__-0-120"><a id="__codelineno-0-120" name="__codelineno-0-120"></a><span class="sd">        headroom: Peak luminance headroom value, typically 2.0-8.0.</span>
-</span><span id="__linenumbers__-0-121"><a id="__codelineno-0-121" name="__codelineno-0-121"></a><span class="sd">            Represents the maximum brightness multiplier for HDR highlights.</span>
-</span><span id="__linenumbers__-0-122"><a id="__codelineno-0-122" name="__codelineno-0-122"></a>
-</span><span id="__linenumbers__-0-123"><a id="__codelineno-0-123" name="__codelineno-0-123"></a><span class="sd">    See Also:</span>
-</span><span id="__linenumbers__-0-124"><a id="__codelineno-0-124" name="__codelineno-0-124"></a><span class="sd">        - `read_apple_heic`: Read AppleHeicData from HEIC file.</span>
-</span><span id="__linenumbers__-0-125"><a id="__codelineno-0-125" name="__codelineno-0-125"></a><span class="sd">        - `apple_heic_to_hdr`: Convert AppleHeicData to linear HDRImage.</span>
-</span><span id="__linenumbers__-0-126"><a id="__codelineno-0-126" name="__codelineno-0-126"></a><span class="sd">    &quot;&quot;&quot;</span>
-</span><span id="__linenumbers__-0-127"><a id="__codelineno-0-127" name="__codelineno-0-127"></a>
-</span><span id="__linenumbers__-0-128"><a id="__codelineno-0-128" name="__codelineno-0-128"></a>    <span class="n">base</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span>
-</span><span id="__linenumbers__-0-129"><a id="__codelineno-0-129" name="__codelineno-0-129"></a>    <span class="n">gainmap</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span>
-</span><span id="__linenumbers__-0-130"><a id="__codelineno-0-130" name="__codelineno-0-130"></a>    <span class="n">headroom</span><span class="p">:</span> <span class="nb">float</span>
+<span class="normal"><a href="#__codelineno-0-130">130</a></span>
+<span class="normal"><a href="#__codelineno-0-131">131</a></span>
+<span class="normal"><a href="#__codelineno-0-132">132</a></span>
+<span class="normal"><a href="#__codelineno-0-133">133</a></span>
+<span class="normal"><a href="#__codelineno-0-134">134</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__linenumbers__-0-112"><a id="__codelineno-0-112" name="__codelineno-0-112"></a><span class="k">class</span><span class="w"> </span><span class="nc">AppleHeicData</span><span class="p">(</span><span class="n">TypedDict</span><span class="p">):</span>
+</span><span id="__linenumbers__-0-113"><a id="__codelineno-0-113" name="__codelineno-0-113"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Apple HEIC HDR image data structure.</span>
+</span><span id="__linenumbers__-0-114"><a id="__codelineno-0-114" name="__codelineno-0-114"></a>
+</span><span id="__linenumbers__-0-115"><a id="__codelineno-0-115" name="__codelineno-0-115"></a><span class="sd">    Contains the base (SDR) image, single-channel gainmap, and headroom value</span>
+</span><span id="__linenumbers__-0-116"><a id="__codelineno-0-116" name="__codelineno-0-116"></a><span class="sd">    used by Apple&#39;s proprietary HDR gain map format in iPhone photos.</span>
+</span><span id="__linenumbers__-0-117"><a id="__codelineno-0-117" name="__codelineno-0-117"></a>
+</span><span id="__linenumbers__-0-118"><a id="__codelineno-0-118" name="__codelineno-0-118"></a><span class="sd">    The HDR reconstruction formula is:</span>
+</span><span id="__linenumbers__-0-119"><a id="__codelineno-0-119" name="__codelineno-0-119"></a><span class="sd">        hdr_rgb = sdr_rgb * (1.0 + (headroom - 1.0) * gainmap)</span>
+</span><span id="__linenumbers__-0-120"><a id="__codelineno-0-120" name="__codelineno-0-120"></a>
+</span><span id="__linenumbers__-0-121"><a id="__codelineno-0-121" name="__codelineno-0-121"></a><span class="sd">    Attributes:</span>
+</span><span id="__linenumbers__-0-122"><a id="__codelineno-0-122" name="__codelineno-0-122"></a><span class="sd">        base: numpy image array, uint8, shape (H, W, 3), range [0, 255].</span>
+</span><span id="__linenumbers__-0-123"><a id="__codelineno-0-123" name="__codelineno-0-123"></a><span class="sd">        gainmap: numpy array, uint8, shape (H, W, 1), range [0, 255].</span>
+</span><span id="__linenumbers__-0-124"><a id="__codelineno-0-124" name="__codelineno-0-124"></a><span class="sd">        headroom: Peak luminance headroom value, typically 2.0-8.0.</span>
+</span><span id="__linenumbers__-0-125"><a id="__codelineno-0-125" name="__codelineno-0-125"></a><span class="sd">            Represents the maximum brightness multiplier for HDR highlights.</span>
+</span><span id="__linenumbers__-0-126"><a id="__codelineno-0-126" name="__codelineno-0-126"></a>
+</span><span id="__linenumbers__-0-127"><a id="__codelineno-0-127" name="__codelineno-0-127"></a><span class="sd">    See Also:</span>
+</span><span id="__linenumbers__-0-128"><a id="__codelineno-0-128" name="__codelineno-0-128"></a><span class="sd">        - `read_apple_heic`: Read AppleHeicData from HEIC file.</span>
+</span><span id="__linenumbers__-0-129"><a id="__codelineno-0-129" name="__codelineno-0-129"></a><span class="sd">        - `apple_heic_to_hdr`: Convert AppleHeicData to linear HDRImage.</span>
+</span><span id="__linenumbers__-0-130"><a id="__codelineno-0-130" name="__codelineno-0-130"></a><span class="sd">    &quot;&quot;&quot;</span>
+</span><span id="__linenumbers__-0-131"><a id="__codelineno-0-131" name="__codelineno-0-131"></a>
+</span><span id="__linenumbers__-0-132"><a id="__codelineno-0-132" name="__codelineno-0-132"></a>    <span class="n">base</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span>
+</span><span id="__linenumbers__-0-133"><a id="__codelineno-0-133" name="__codelineno-0-133"></a>    <span class="n">gainmap</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span>
+</span><span id="__linenumbers__-0-134"><a id="__codelineno-0-134" name="__codelineno-0-134"></a>    <span class="n">headroom</span><span class="p">:</span> <span class="nb">float</span>
 </span></code></pre></div></td></tr></table></div>
               </details>
 
@@ -1669,7 +1713,7 @@ Represents the maximum brightness multiplier for HDR highlights.</p>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>numpy array, uint8, shape (H, W, 3), range [0, 255].</p>
+                <p>numpy array, shape (H, W, 3).</p>
               </div>
             </td>
           </tr>
@@ -1684,7 +1728,7 @@ Represents the maximum brightness multiplier for HDR highlights.</p>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>numpy array, uint8, shape (H, W, 3) or (H, W, 1), range [0, 255].</p>
+                <p>numpy array, shape (H, W, 3) or (H, W, 1).</p>
               </div>
             </td>
           </tr>
@@ -1733,6 +1777,36 @@ Represents the maximum brightness multiplier for HDR highlights.</p>
               </div>
             </td>
           </tr>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="baseline_bit_depth
+
+  
+      instance-attribute
+   (hdrconv.core.GainmapImage.baseline_bit_depth)" href="#hdrconv.core.GainmapImage.baseline_bit_depth">baseline_bit_depth</a></code></td>
+            <td>
+                  <code><span title="typing.NotRequired">NotRequired</span>[<span title="int">int</span>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Optional integer sample bit depth read from the source file.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="gainmap_bit_depth
+
+  
+      instance-attribute
+   (hdrconv.core.GainmapImage.gainmap_bit_depth)" href="#hdrconv.core.GainmapImage.gainmap_bit_depth">gainmap_bit_depth</a></code></td>
+            <td>
+                  <code><span title="typing.NotRequired">NotRequired</span>[<span title="int">int</span>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Optional integer sample bit depth read from the source file.</p>
+              </div>
+            </td>
+          </tr>
       </tbody>
     </table>
 
@@ -1762,24 +1836,32 @@ Represents the maximum brightness multiplier for HDR highlights.</p>
 <span class="normal"><a href="#__codelineno-0-73">73</a></span>
 <span class="normal"><a href="#__codelineno-0-74">74</a></span>
 <span class="normal"><a href="#__codelineno-0-75">75</a></span>
-<span class="normal"><a href="#__codelineno-0-76">76</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__linenumbers__-0-59"><a id="__codelineno-0-59" name="__codelineno-0-59"></a><span class="k">class</span><span class="w"> </span><span class="nc">GainmapImage</span><span class="p">(</span><span class="n">TypedDict</span><span class="p">):</span>
+<span class="normal"><a href="#__codelineno-0-76">76</a></span>
+<span class="normal"><a href="#__codelineno-0-77">77</a></span>
+<span class="normal"><a href="#__codelineno-0-78">78</a></span>
+<span class="normal"><a href="#__codelineno-0-79">79</a></span>
+<span class="normal"><a href="#__codelineno-0-80">80</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__linenumbers__-0-59"><a id="__codelineno-0-59" name="__codelineno-0-59"></a><span class="k">class</span><span class="w"> </span><span class="nc">GainmapImage</span><span class="p">(</span><span class="n">TypedDict</span><span class="p">):</span>
 </span><span id="__linenumbers__-0-60"><a id="__codelineno-0-60" name="__codelineno-0-60"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;ISO 21496-1 Gainmap image structure.</span>
 </span><span id="__linenumbers__-0-61"><a id="__codelineno-0-61" name="__codelineno-0-61"></a>
 </span><span id="__linenumbers__-0-62"><a id="__codelineno-0-62" name="__codelineno-0-62"></a><span class="sd">    Contains the baseline image, gainmap, and metadata.</span>
 </span><span id="__linenumbers__-0-63"><a id="__codelineno-0-63" name="__codelineno-0-63"></a>
 </span><span id="__linenumbers__-0-64"><a id="__codelineno-0-64" name="__codelineno-0-64"></a><span class="sd">    Attributes:</span>
-</span><span id="__linenumbers__-0-65"><a id="__codelineno-0-65" name="__codelineno-0-65"></a><span class="sd">        baseline: numpy array, uint8, shape (H, W, 3), range [0, 255].</span>
-</span><span id="__linenumbers__-0-66"><a id="__codelineno-0-66" name="__codelineno-0-66"></a><span class="sd">        gainmap: numpy array, uint8, shape (H, W, 3) or (H, W, 1), range [0, 255].</span>
+</span><span id="__linenumbers__-0-65"><a id="__codelineno-0-65" name="__codelineno-0-65"></a><span class="sd">        baseline: numpy array, shape (H, W, 3).</span>
+</span><span id="__linenumbers__-0-66"><a id="__codelineno-0-66" name="__codelineno-0-66"></a><span class="sd">        gainmap: numpy array, shape (H, W, 3) or (H, W, 1).</span>
 </span><span id="__linenumbers__-0-67"><a id="__codelineno-0-67" name="__codelineno-0-67"></a><span class="sd">        metadata: GainmapMetadata dict containing transformation parameters.</span>
 </span><span id="__linenumbers__-0-68"><a id="__codelineno-0-68" name="__codelineno-0-68"></a><span class="sd">        baseline_icc: Optional ICC profile bytes for baseline image color space.</span>
 </span><span id="__linenumbers__-0-69"><a id="__codelineno-0-69" name="__codelineno-0-69"></a><span class="sd">        gainmap_icc: Optional ICC profile bytes for gainmap color space.</span>
-</span><span id="__linenumbers__-0-70"><a id="__codelineno-0-70" name="__codelineno-0-70"></a><span class="sd">    &quot;&quot;&quot;</span>
-</span><span id="__linenumbers__-0-71"><a id="__codelineno-0-71" name="__codelineno-0-71"></a>
-</span><span id="__linenumbers__-0-72"><a id="__codelineno-0-72" name="__codelineno-0-72"></a>    <span class="n">baseline</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span>
-</span><span id="__linenumbers__-0-73"><a id="__codelineno-0-73" name="__codelineno-0-73"></a>    <span class="n">gainmap</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span>
-</span><span id="__linenumbers__-0-74"><a id="__codelineno-0-74" name="__codelineno-0-74"></a>    <span class="n">metadata</span><span class="p">:</span> <span class="n">GainmapMetadata</span>
-</span><span id="__linenumbers__-0-75"><a id="__codelineno-0-75" name="__codelineno-0-75"></a>    <span class="n">baseline_icc</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">bytes</span><span class="p">]</span>
-</span><span id="__linenumbers__-0-76"><a id="__codelineno-0-76" name="__codelineno-0-76"></a>    <span class="n">gainmap_icc</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">bytes</span><span class="p">]</span>
+</span><span id="__linenumbers__-0-70"><a id="__codelineno-0-70" name="__codelineno-0-70"></a><span class="sd">        baseline_bit_depth: Optional integer sample bit depth read from the source file.</span>
+</span><span id="__linenumbers__-0-71"><a id="__codelineno-0-71" name="__codelineno-0-71"></a><span class="sd">        gainmap_bit_depth: Optional integer sample bit depth read from the source file.</span>
+</span><span id="__linenumbers__-0-72"><a id="__codelineno-0-72" name="__codelineno-0-72"></a><span class="sd">    &quot;&quot;&quot;</span>
+</span><span id="__linenumbers__-0-73"><a id="__codelineno-0-73" name="__codelineno-0-73"></a>
+</span><span id="__linenumbers__-0-74"><a id="__codelineno-0-74" name="__codelineno-0-74"></a>    <span class="n">baseline</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span>
+</span><span id="__linenumbers__-0-75"><a id="__codelineno-0-75" name="__codelineno-0-75"></a>    <span class="n">gainmap</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span>
+</span><span id="__linenumbers__-0-76"><a id="__codelineno-0-76" name="__codelineno-0-76"></a>    <span class="n">metadata</span><span class="p">:</span> <span class="n">GainmapMetadata</span>
+</span><span id="__linenumbers__-0-77"><a id="__codelineno-0-77" name="__codelineno-0-77"></a>    <span class="n">baseline_icc</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">bytes</span><span class="p">]</span>
+</span><span id="__linenumbers__-0-78"><a id="__codelineno-0-78" name="__codelineno-0-78"></a>    <span class="n">gainmap_icc</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">bytes</span><span class="p">]</span>
+</span><span id="__linenumbers__-0-79"><a id="__codelineno-0-79" name="__codelineno-0-79"></a>    <span class="n">baseline_bit_depth</span><span class="p">:</span> <span class="n">NotRequired</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span>
+</span><span id="__linenumbers__-0-80"><a id="__codelineno-0-80" name="__codelineno-0-80"></a>    <span class="n">gainmap_bit_depth</span><span class="p">:</span> <span class="n">NotRequired</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span>
 </span></code></pre></div></td></tr></table></div>
               </details>
 
@@ -1879,6 +1961,46 @@ Represents the maximum brightness multiplier for HDR highlights.</p>
 
 <h4 id="hdrconv.core.GainmapImage.gainmap_icc" class="doc doc-heading">
             <code class="highlight language-python"><span class="n">gainmap_icc</span></code>
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
+  </span>
+
+</h4>
+
+
+    <div class="doc doc-contents ">
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h4 id="hdrconv.core.GainmapImage.baseline_bit_depth" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">baseline_bit_depth</span></code>
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
+  </span>
+
+</h4>
+
+
+    <div class="doc doc-contents ">
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h4 id="hdrconv.core.GainmapImage.gainmap_bit_depth" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">gainmap_bit_depth</span></code>
 
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
@@ -2492,11 +2614,7 @@ icc_profile: ICC profile bytes for custom color space definition.</p>
 
               <details class="mkdocstrings-source">
                 <summary>Source code in <code>src/hdrconv/core/types.py</code></summary>
-                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-79"> 79</a></span>
-<span class="normal"><a href="#__codelineno-0-80"> 80</a></span>
-<span class="normal"><a href="#__codelineno-0-81"> 81</a></span>
-<span class="normal"><a href="#__codelineno-0-82"> 82</a></span>
-<span class="normal"><a href="#__codelineno-0-83"> 83</a></span>
+                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-83"> 83</a></span>
 <span class="normal"><a href="#__codelineno-0-84"> 84</a></span>
 <span class="normal"><a href="#__codelineno-0-85"> 85</a></span>
 <span class="normal"><a href="#__codelineno-0-86"> 86</a></span>
@@ -2518,33 +2636,37 @@ icc_profile: ICC profile bytes for custom color space definition.</p>
 <span class="normal"><a href="#__codelineno-0-102">102</a></span>
 <span class="normal"><a href="#__codelineno-0-103">103</a></span>
 <span class="normal"><a href="#__codelineno-0-104">104</a></span>
-<span class="normal"><a href="#__codelineno-0-105">105</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__linenumbers__-0-79"><a id="__codelineno-0-79" name="__codelineno-0-79"></a><span class="k">class</span><span class="w"> </span><span class="nc">HDRImage</span><span class="p">(</span><span class="n">TypedDict</span><span class="p">):</span>
-</span><span id="__linenumbers__-0-80"><a id="__codelineno-0-80" name="__codelineno-0-80"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;HDR image representation with color metadata.</span>
-</span><span id="__linenumbers__-0-81"><a id="__codelineno-0-81" name="__codelineno-0-81"></a>
-</span><span id="__linenumbers__-0-82"><a id="__codelineno-0-82" name="__codelineno-0-82"></a><span class="sd">    Contains linear or transfer-encoded RGB data with associated color space</span>
-</span><span id="__linenumbers__-0-83"><a id="__codelineno-0-83" name="__codelineno-0-83"></a><span class="sd">    and transfer function information for proper display and conversion.</span>
-</span><span id="__linenumbers__-0-84"><a id="__codelineno-0-84" name="__codelineno-0-84"></a>
-</span><span id="__linenumbers__-0-85"><a id="__codelineno-0-85" name="__codelineno-0-85"></a><span class="sd">    Required Attributes:</span>
-</span><span id="__linenumbers__-0-86"><a id="__codelineno-0-86" name="__codelineno-0-86"></a><span class="sd">        data: Image data array, float32, shape (H, W, 3).</span>
-</span><span id="__linenumbers__-0-87"><a id="__codelineno-0-87" name="__codelineno-0-87"></a><span class="sd">            For linear transfer: values in linear light, range [0, peak_luminance/reference_white].</span>
-</span><span id="__linenumbers__-0-88"><a id="__codelineno-0-88" name="__codelineno-0-88"></a><span class="sd">            For PQ transfer: values in range [0, 1] representing 0-10000 nits.</span>
-</span><span id="__linenumbers__-0-89"><a id="__codelineno-0-89" name="__codelineno-0-89"></a><span class="sd">            For HLG transfer: values in range [0, 1] representing scene-referred light.</span>
-</span><span id="__linenumbers__-0-90"><a id="__codelineno-0-90" name="__codelineno-0-90"></a><span class="sd">        transfer_function: Transfer function applied to the data.</span>
-</span><span id="__linenumbers__-0-91"><a id="__codelineno-0-91" name="__codelineno-0-91"></a><span class="sd">            Options: &#39;linear&#39;, &#39;pq&#39; (SMPTE ST 2084), &#39;hlg&#39; (ITU-R BT.2100), &#39;srgb&#39;.</span>
-</span><span id="__linenumbers__-0-92"><a id="__codelineno-0-92" name="__codelineno-0-92"></a>
-</span><span id="__linenumbers__-0-93"><a id="__codelineno-0-93" name="__codelineno-0-93"></a><span class="sd">    Optional Attributes:</span>
-</span><span id="__linenumbers__-0-94"><a id="__codelineno-0-94" name="__codelineno-0-94"></a><span class="sd">        color_space: Color primaries identifier.</span>
-</span><span id="__linenumbers__-0-95"><a id="__codelineno-0-95" name="__codelineno-0-95"></a><span class="sd">            Options: &#39;bt709&#39; (Rec. 709), &#39;p3&#39; (Display P3), &#39;bt2020&#39; (Rec. 2020).</span>
-</span><span id="__linenumbers__-0-96"><a id="__codelineno-0-96" name="__codelineno-0-96"></a><span class="sd">        icc_profile: ICC profile bytes for custom color space definition.</span>
-</span><span id="__linenumbers__-0-97"><a id="__codelineno-0-97" name="__codelineno-0-97"></a>
-</span><span id="__linenumbers__-0-98"><a id="__codelineno-0-98" name="__codelineno-0-98"></a><span class="sd">    See Also:</span>
-</span><span id="__linenumbers__-0-99"><a id="__codelineno-0-99" name="__codelineno-0-99"></a><span class="sd">        - `gainmap_to_hdr`: Create HDRImage from GainmapImage.</span>
-</span><span id="__linenumbers__-0-100"><a id="__codelineno-0-100" name="__codelineno-0-100"></a><span class="sd">    &quot;&quot;&quot;</span>
+<span class="normal"><a href="#__codelineno-0-105">105</a></span>
+<span class="normal"><a href="#__codelineno-0-106">106</a></span>
+<span class="normal"><a href="#__codelineno-0-107">107</a></span>
+<span class="normal"><a href="#__codelineno-0-108">108</a></span>
+<span class="normal"><a href="#__codelineno-0-109">109</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__linenumbers__-0-83"><a id="__codelineno-0-83" name="__codelineno-0-83"></a><span class="k">class</span><span class="w"> </span><span class="nc">HDRImage</span><span class="p">(</span><span class="n">TypedDict</span><span class="p">):</span>
+</span><span id="__linenumbers__-0-84"><a id="__codelineno-0-84" name="__codelineno-0-84"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;HDR image representation with color metadata.</span>
+</span><span id="__linenumbers__-0-85"><a id="__codelineno-0-85" name="__codelineno-0-85"></a>
+</span><span id="__linenumbers__-0-86"><a id="__codelineno-0-86" name="__codelineno-0-86"></a><span class="sd">    Contains linear or transfer-encoded RGB data with associated color space</span>
+</span><span id="__linenumbers__-0-87"><a id="__codelineno-0-87" name="__codelineno-0-87"></a><span class="sd">    and transfer function information for proper display and conversion.</span>
+</span><span id="__linenumbers__-0-88"><a id="__codelineno-0-88" name="__codelineno-0-88"></a>
+</span><span id="__linenumbers__-0-89"><a id="__codelineno-0-89" name="__codelineno-0-89"></a><span class="sd">    Required Attributes:</span>
+</span><span id="__linenumbers__-0-90"><a id="__codelineno-0-90" name="__codelineno-0-90"></a><span class="sd">        data: Image data array, float32, shape (H, W, 3).</span>
+</span><span id="__linenumbers__-0-91"><a id="__codelineno-0-91" name="__codelineno-0-91"></a><span class="sd">            For linear transfer: values in linear light, range [0, peak_luminance/reference_white].</span>
+</span><span id="__linenumbers__-0-92"><a id="__codelineno-0-92" name="__codelineno-0-92"></a><span class="sd">            For PQ transfer: values in range [0, 1] representing 0-10000 nits.</span>
+</span><span id="__linenumbers__-0-93"><a id="__codelineno-0-93" name="__codelineno-0-93"></a><span class="sd">            For HLG transfer: values in range [0, 1] representing scene-referred light.</span>
+</span><span id="__linenumbers__-0-94"><a id="__codelineno-0-94" name="__codelineno-0-94"></a><span class="sd">        transfer_function: Transfer function applied to the data.</span>
+</span><span id="__linenumbers__-0-95"><a id="__codelineno-0-95" name="__codelineno-0-95"></a><span class="sd">            Options: &#39;linear&#39;, &#39;pq&#39; (SMPTE ST 2084), &#39;hlg&#39; (ITU-R BT.2100), &#39;srgb&#39;.</span>
+</span><span id="__linenumbers__-0-96"><a id="__codelineno-0-96" name="__codelineno-0-96"></a>
+</span><span id="__linenumbers__-0-97"><a id="__codelineno-0-97" name="__codelineno-0-97"></a><span class="sd">    Optional Attributes:</span>
+</span><span id="__linenumbers__-0-98"><a id="__codelineno-0-98" name="__codelineno-0-98"></a><span class="sd">        color_space: Color primaries identifier.</span>
+</span><span id="__linenumbers__-0-99"><a id="__codelineno-0-99" name="__codelineno-0-99"></a><span class="sd">            Options: &#39;bt709&#39; (Rec. 709), &#39;p3&#39; (Display P3), &#39;bt2020&#39; (Rec. 2020).</span>
+</span><span id="__linenumbers__-0-100"><a id="__codelineno-0-100" name="__codelineno-0-100"></a><span class="sd">        icc_profile: ICC profile bytes for custom color space definition.</span>
 </span><span id="__linenumbers__-0-101"><a id="__codelineno-0-101" name="__codelineno-0-101"></a>
-</span><span id="__linenumbers__-0-102"><a id="__codelineno-0-102" name="__codelineno-0-102"></a>    <span class="n">data</span><span class="p">:</span> <span class="n">Required</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span>
-</span><span id="__linenumbers__-0-103"><a id="__codelineno-0-103" name="__codelineno-0-103"></a>    <span class="n">transfer_function</span><span class="p">:</span> <span class="n">Required</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span>
-</span><span id="__linenumbers__-0-104"><a id="__codelineno-0-104" name="__codelineno-0-104"></a>    <span class="n">color_space</span><span class="p">:</span> <span class="n">NotRequired</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span>
-</span><span id="__linenumbers__-0-105"><a id="__codelineno-0-105" name="__codelineno-0-105"></a>    <span class="n">icc_profile</span><span class="p">:</span> <span class="n">NotRequired</span><span class="p">[</span><span class="n">Optional</span><span class="p">[</span><span class="nb">bytes</span><span class="p">]]</span>
+</span><span id="__linenumbers__-0-102"><a id="__codelineno-0-102" name="__codelineno-0-102"></a><span class="sd">    See Also:</span>
+</span><span id="__linenumbers__-0-103"><a id="__codelineno-0-103" name="__codelineno-0-103"></a><span class="sd">        - `gainmap_to_hdr`: Create HDRImage from GainmapImage.</span>
+</span><span id="__linenumbers__-0-104"><a id="__codelineno-0-104" name="__codelineno-0-104"></a><span class="sd">    &quot;&quot;&quot;</span>
+</span><span id="__linenumbers__-0-105"><a id="__codelineno-0-105" name="__codelineno-0-105"></a>
+</span><span id="__linenumbers__-0-106"><a id="__codelineno-0-106" name="__codelineno-0-106"></a>    <span class="n">data</span><span class="p">:</span> <span class="n">Required</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span>
+</span><span id="__linenumbers__-0-107"><a id="__codelineno-0-107" name="__codelineno-0-107"></a>    <span class="n">transfer_function</span><span class="p">:</span> <span class="n">Required</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span>
+</span><span id="__linenumbers__-0-108"><a id="__codelineno-0-108" name="__codelineno-0-108"></a>    <span class="n">color_space</span><span class="p">:</span> <span class="n">NotRequired</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span>
+</span><span id="__linenumbers__-0-109"><a id="__codelineno-0-109" name="__codelineno-0-109"></a>    <span class="n">icc_profile</span><span class="p">:</span> <span class="n">NotRequired</span><span class="p">[</span><span class="n">Optional</span><span class="p">[</span><span class="nb">bytes</span><span class="p">]]</span>
 </span></code></pre></div></td></tr></table></div>
               </details>
 
