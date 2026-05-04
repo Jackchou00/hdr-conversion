@@ -7,6 +7,7 @@ import hdrconv.io as io
 import hdrconv.convert as convert
 from hdrconv.core import HDRImage
 
+
 def main():
     parser = argparse.ArgumentParser(description="Create a test gainmap patch.")
     parser.add_argument("p3_icc_path", help="Display P3 ICC")
@@ -33,7 +34,9 @@ def main():
 
     # Convert baseline to BT.2020.
     baseline_image_bt2020 = colour.RGB_to_RGB(
-        baseline_image, input_colourspace="Display P3", output_colourspace="ITU-R BT.2020"
+        baseline_image,
+        input_colourspace="Display P3",
+        output_colourspace="ITU-R BT.2020",
     )
 
     hdr_image: HDRImage = {

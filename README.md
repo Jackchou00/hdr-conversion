@@ -48,27 +48,31 @@ import hdrconv
 
 ### Parsing
 
-For UltraHDR and Adaptive Gainmap formats, supports structured extraction of:
+For UltraHDR and Adaptive Gainmap (ISO 21496-1) formats, supports structured extraction of:
 
 - Main image data
 - Gainmap image data
 - Gainmap metadata
 
-For pure PQ/HLG formats, supports extraction of image data and related metadata.
+For pure PQ/HLG HEIF/AVIF formats (ISO 22028-5), supports extraction of image data and related metadata.
 
-Add experimental support for iOS 26 HDR screenshot parsing.
+Experimental support for iOS 26 HDR screenshot parsing.
+
+Experimental support for HEIF from iPhone camera using Apple Headroom.
 
 ### Writing
 
 Writes image data and structured metadata into corresponding formats.
 
-UltraHDR and Adaptive Gainmap formats are implemented through manual byte stream editing combined with existing library JPEG encoding capabilities, while pure PQ/HLG formats are implemented through existing libraries.
+UltraHDR and Adaptive Gainmap JPEG formats are implemented through manual byte stream editing.
 
-UltraHDR I/O APIs: `read_ultrahdr()` / `write_ultrahdr()`.
+pure PQ/HLG AVIF formats are implemented through `imagecodecs`.
 
 ### Conversion
 
 Calculates alternate images based on metadata to enable conversion between Gainmap and pure HDR formats.
+
+Experimental support for ICC profile-based color conversion.
 
 ## Reference Standards
 

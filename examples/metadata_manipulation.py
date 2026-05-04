@@ -8,6 +8,7 @@ import argparse
 
 import hdrconv.io as io
 
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__.strip().splitlines()[0])
     parser.add_argument("input_path", help="Input ISO 21496-1 JPEG")

@@ -26,6 +26,8 @@ Install using `pip`:
 pip install hdr-conversion
 ```
 
+Some features may require `ffmpeg`, `exiftool` or `gpac`, please ensure they are installed and available in your system PATH.
+
 ### Install from Develop Branch
 
 To try the latest unreleased features, install directly from the `develop` branch:
@@ -62,18 +64,17 @@ Format transformation algorithms:
 - `gainmap_to_hdr()` / `hdr_to_gainmap()`
 - `apple_heic_to_hdr()`
 
-!!! note "Color Space Conversion"
-    Built-in color space conversion functions have been removed. Users should implement color space conversions using external libraries like [`colour-science`](https://colour-science.readthedocs.io/). See [Examples](examples.md) for usage patterns.
+Experimental support for ICC profile-based color conversion (`hdrconv.icc`).
 
 ### I/O (`hdrconv.io`)
 
 Reading and writing functions:
 
-- `read_21496()` / `write_21496()`
+- `read_21496()` (JPEG, HEIF, AVIF) / `write_21496()` (JPEG)
 - `read_ultrahdr()` / `write_ultrahdr()`
 - `read_22028_pq()` / `write_22028_pq()`
-- `read_apple_heic()`
-- `read_ios_hdr_screenshot()`
+- `read_apple_heic()` (Experimental)
+- `read_ios_hdr_screenshot()` (Experimental)
 
 ### Identification (`hdrconv.identify`)
 
@@ -110,7 +111,7 @@ Format detection utilities:
 
 ## Limitations
 
-⚠️ **Important**:
+**Important**:
 
 - Not production-ready
 - Color conversion may be inaccurate

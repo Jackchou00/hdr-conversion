@@ -94,6 +94,7 @@ def read_icc_whitepoint(icc_source: bytes | str | Path) -> np.ndarray:
     return _require_xyz_triplet(result["tag_data"], "wtpt")
 
 
+# TODO: Add docstring (Args, Returns, description).
 def build_icc_conversion_matrix(
     source_icc: bytes | str | Path, target_icc: bytes | str | Path
 ) -> np.ndarray:
@@ -102,6 +103,7 @@ def build_icc_conversion_matrix(
     return np.linalg.inv(target_matrix) @ source_matrix
 
 
+# TODO: Add docstring (Args, Returns, description).
 def convert_array_with_icc_matrix(
     source_icc: bytes | str | Path,
     target_icc: bytes | str | Path,

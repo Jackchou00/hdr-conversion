@@ -11,6 +11,7 @@ import hdrconv.io as io
 import hdrconv.convert as convert
 import hdrconv.identify as identify
 
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__.strip().splitlines()[0])
     parser.add_argument("input_path", help="Input Apple HEIC")

@@ -48,27 +48,31 @@ import hdrconv
 
 ### 解析
 
-对于 UltraHDR 和 Adaptive Gainmap 格式，支持结构化的提取以下内容：
+对于 UltraHDR 和 Adaptive Gainmap (ISO 21496-1) 格式，支持结构化的提取以下内容：
 
 - 主图像数据
 - Gainmap 图像数据
 - Gainmap 元数据
 
-对于纯 PQ/HLG 格式，支持提取图像数据和相关元数据。
+对于纯 PQ/HLG HEIF/AVIF 格式 (ISO 22028-5)，支持提取图像数据和相关元数据。
 
-添加对 iOS 26 HDR 屏幕截图的实验性支持。
+对 iOS 26 HDR 屏幕截图的实验性支持。
+
+对使用 Apple Headroom 的 iPhone 相机 HEIF 的实验性支持。
 
 ### 写入
 
 将图像数据和结构化的元数据写入对应的格式中。
 
-其中，UltraHDR 和 Adaptive Gainmap 格式通过手动编辑字节流与现有库提供的 JPEG 编码能力实现，而纯 PQ/HLG 格式则通过现有的库实现。
+其中，UltraHDR 和 Adaptive Gainmap JPEG 格式通过手动编辑字节流实现。
 
-UltraHDR I/O 接口：`read_ultrahdr()` / `write_ultrahdr()`。
+纯 PQ/HLG AVIF 格式通过 `imagecodecs` 实现。
 
 ### 转换
 
 根据元数据计算替代图像（Alternate Image），实现在 Gainmap 与纯 HDR 格式之间的转换。
+
+基于 ICC 配置文件的色彩转换实验性支持。
 
 ## 参考标准
 

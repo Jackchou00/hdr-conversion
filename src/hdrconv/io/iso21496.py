@@ -551,9 +551,7 @@ def _dump_isobmff_item_bytes(filepath: str, item_id: int, temp_dir: str) -> byte
 
 
 def _check_ffmpeg_installed() -> None:
-    missing = [
-        tool for tool in ("ffmpeg", "ffprobe") if shutil.which(tool) is None
-    ]
+    missing = [tool for tool in ("ffmpeg", "ffprobe") if shutil.which(tool) is None]
     if missing:
         raise RuntimeError(
             f"Missing required external tools: {', '.join(missing)}. "
@@ -578,9 +576,7 @@ def _parse_isobmff_structure(filepath: str, temp_dir: str) -> dict[str, Any]:
     child_prefix = "./m:" if namespace else "./"
 
     primary_box = root.find(f"{prefix}PrimaryItemBox", ns)
-    primary_id = (
-        int(primary_box.attrib["item_ID"]) if primary_box is not None else None
-    )
+    primary_id = int(primary_box.attrib["item_ID"]) if primary_box is not None else None
 
     items: dict[int, dict[str, Any]] = {}
     for entry in root.findall(f"{prefix}ItemInfoEntryBox", ns):
@@ -698,7 +694,11 @@ def _select_isobmff_tmap_items(
     selected = []
     items = structure["items"]
     refs = structure["refs"]
-    altr_groups = [entities for group_type, _, entities in structure["groups"] if group_type == "altr"]
+    altr_groups = [
+        entities
+        for group_type, _, entities in structure["groups"]
+        if group_type == "altr"
+    ]
 
     for tmap_id, info in items.items():
         if info.get("type") != "tmap":
@@ -888,9 +888,7 @@ def _decode_video_item_to_array(
             .copy()
         )
     if pix_fmt.startswith("gbrp") and pix_fmt.endswith("le"):
-        planes = np.frombuffer(result.stdout, dtype=np.uint16).reshape(
-            3, height, width
-        )
+        planes = np.frombuffer(result.stdout, dtype=np.uint16).reshape(3, height, width)
         return np.stack([planes[2], planes[0], planes[1]], axis=-1).copy()
 
     raise ValueError(f"Unsupported rawvideo pixel format: {pix_fmt}")
@@ -913,8 +911,6 @@ def _read_isobmff_grid_image(
     structure: dict[str, Any],
     temp_dir: str,
 ) -> np.ndarray:
-    _check_ffmpeg_installed()
-
     tile_ids = structure["refs"].get(("dimg", item_id), [])
     if not tile_ids:
         raise ValueError(f"Grid image item {item_id} has no dimg tile references.")
@@ -1331,6 +1327,7 @@ def _read_21496_jpeg(filepath: str) -> GainmapImage:
 def _read_21496_isobmff(filepath: str) -> GainmapImage:
     """Read ISO 21496-1 Gainmap HEIF/AVIF file."""
     _check_mp4box_installed()
+    _check_ffmpeg_installed()
 
     last_error: Exception | None = None
     with tempfile.TemporaryDirectory(prefix="hdrconv_21496_") as temp_dir:
@@ -1345,9 +1342,7 @@ def _read_21496_isobmff(filepath: str) -> GainmapImage:
             try:
                 tmap_data = _dump_isobmff_item_bytes(filepath, tmap_id, temp_dir)
                 metadata = _parse_iso21496_metadata(tmap_data)
-                baseline_bit_depth = _get_isobmff_item_bit_depth(
-                    structure, baseline_id
-                )
+                baseline_bit_depth = _get_isobmff_item_bit_depth(structure, baseline_id)
                 gainmap_bit_depth = _require_isobmff_item_bit_depth(
                     structure, gainmap_id, "gainmap"
                 )

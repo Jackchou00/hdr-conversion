@@ -121,6 +121,7 @@ def _linearize_array_with_icc_curv(trc_dict, img_array):
         return np.interp(X, xp, yp)
 
 
+# TODO: Add docstring (Args, Returns, description).
 def linearize_array_with_icc(
     icc_file: bytes | str | Path, img_array: np.ndarray
 ) -> np.ndarray:

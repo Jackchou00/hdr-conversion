@@ -11,6 +11,7 @@ import hdrconv.convert as convert
 
 import numpy as np
 
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__.strip().splitlines()[0])
     parser.add_argument("input_path", help="Input linear HDR .npy")
