@@ -21,7 +21,7 @@
       
       
       <link rel="icon" href="assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.1">
+      <meta name="generator" content="mkdocs-ProperDocs 1.6.7, mkdocs-material-9.7.6">
     
     
       
@@ -1038,6 +1038,7 @@
 <p>Install using <code>pip</code>:</p>
 <div class="highlight"><pre><span></span><code><span id="__linenumbers__-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>pip<span class="w"> </span>install<span class="w"> </span>hdr-conversion
 </span></code></pre></div>
+<p>Some features may require <code>ffmpeg</code>, <code>exiftool</code> or <code>gpac</code>, please ensure they are installed and available in your system PATH.</p>
 <h3 id="install-from-develop-branch">Install from Develop Branch</h3>
 <p>To try the latest unreleased features, install directly from the <code>develop</code> branch:</p>
 <div class="highlight"><pre><span></span><code><span id="__linenumbers__-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>uv<span class="w"> </span>add<span class="w"> </span>git+https://github.com/Jackchou00/hdr-conversion.git<span class="w"> </span>--branch<span class="w"> </span>develop
@@ -1062,18 +1063,15 @@
 <li><code>gainmap_to_hdr()</code> / <code>hdr_to_gainmap()</code></li>
 <li><code>apple_heic_to_hdr()</code></li>
 </ul>
-<div class="admonition note">
-<p class="admonition-title">Color Space Conversion</p>
-<p>Built-in color space conversion functions have been removed. Users should implement color space conversions using external libraries like <a href="https://colour-science.readthedocs.io/"><code>colour-science</code></a>. See <a href="examples/">Examples</a> for usage patterns.</p>
-</div>
+<p>Experimental support for ICC profile-based color conversion (<code>hdrconv.icc</code>).</p>
 <h3 id="io-hdrconvio">I/O (<code>hdrconv.io</code>)</h3>
 <p>Reading and writing functions:</p>
 <ul>
-<li><code>read_21496()</code> / <code>write_21496()</code></li>
+<li><code>read_21496()</code> (JPEG, HEIF, AVIF) / <code>write_21496()</code> (JPEG)</li>
 <li><code>read_ultrahdr()</code> / <code>write_ultrahdr()</code></li>
 <li><code>read_22028_pq()</code> / <code>write_22028_pq()</code></li>
-<li><code>read_apple_heic()</code></li>
-<li><code>read_ios_hdr_screenshot()</code></li>
+<li><code>read_apple_heic()</code> (Experimental)</li>
+<li><code>read_ios_hdr_screenshot()</code> (Experimental)</li>
 </ul>
 <h3 id="identification-hdrconvidentify">Identification (<code>hdrconv.identify</code>)</h3>
 <p>Format detection utilities:</p>
@@ -1106,7 +1104,7 @@
 <li>Validate color conversions</li>
 </ul>
 <h2 id="limitations">Limitations</h2>
-<p>⚠️ <strong>Important</strong>:</p>
+<p><strong>Important</strong>:</p>
 <ul>
 <li>Not production-ready</li>
 <li>Color conversion may be inaccurate</li>
