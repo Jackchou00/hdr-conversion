@@ -25,15 +25,6 @@ from exiftool import ExifToolHelper
 from hdrconv.core import AppleHeicData
 
 
-"""Extract main image and gainmap from iPhone HEIC files.
-
-    The gainmap is stored as an auxiliary image at 1/4 resolution.
-
-    See Also:
-        - https://github.com/finnschi/heic-shenanigans (reference implementation)
-    """
-
-
 # According to Apple documentation, the URN for the HDR gain map auxiliary image is fixed.
 HDR_GAIN_MAP_URN = "urn:com:apple:photo:2020:aux:hdrgainmap"
 
@@ -59,6 +50,9 @@ def read_base_and_gain_map(input_path: str) -> Tuple[np.ndarray, Optional[np.nda
     Note:
         The gain map is typically at 1/4 resolution of the base image
         and uses a single grayscale channel.
+
+    See Also:
+        - https://github.com/finnschi/heic-shenanigans (reference implementation)
     """
     try:
         heif_file = pillow_heif.read_heif(input_path, convert_hdr_to_8bit=False)
@@ -108,17 +102,6 @@ def read_base_and_gain_map(input_path: str) -> Tuple[np.ndarray, Optional[np.nda
     return base_image_np, gain_map_np
 
 
-"""Extract HDR headroom value from Apple HEIC metadata.
-
-    Apple uses headroom instead of GainMap Min and Max.
-    Formula: hdr_rgb = sdr_rgb * (1.0 + (headroom - 1.0) * gainmap)
-
-    See Also:
-        - https://developer.apple.com/documentation/appkit/applying-apple-hdr-effect-to-your-photos
-        - https://github.com/johncf/apple-hdr-heic (metadata extraction reference)
-    """
-
-
 def _check_exiftool_installed() -> None:
     """Check if exiftool is installed and accessible.
 
@@ -138,6 +121,9 @@ def _check_exiftool_installed() -> None:
 def get_headroom(file_path: str | Path, use_makernote: bool = False) -> float:
     """Extract HDR headroom from Apple HEIC metadata.
 
+    Apple uses headroom instead of GainMap Min and Max.
+    Formula: hdr_rgb = sdr_rgb * (1.0 + (headroom - 1.0) * gainmap)
+
     Args:
         file_path: Path to the HEIC file.
         use_makernote: If True, prefer MakerNotes over XMP metadata.
@@ -147,6 +133,11 @@ def get_headroom(file_path: str | Path, use_makernote: bool = False) -> float:
 
     Raises:
         RuntimeError: If exiftool is not installed.
+        ValueError: If neither XMP nor MakerNotes headroom metadata is found.
+
+    See Also:
+        - https://developer.apple.com/documentation/appkit/applying-apple-hdr-effect-to-your-photos
+        - https://github.com/johncf/apple-hdr-heic (metadata extraction reference)
     """
     _check_exiftool_installed()
 
@@ -170,6 +161,12 @@ def get_headroom(file_path: str | Path, use_makernote: bool = False) -> float:
 
     maker33 = metadata.get("MakerNotes:HDRHeadroom")
     maker48 = metadata.get("MakerNotes:HDRGain")
+
+    if maker33 is None or maker48 is None:
+        raise ValueError(
+            "Cannot extract HDR headroom: neither XMP:HDRGainMapHeadroom nor "
+            "MakerNotes:HDRHeadroom/HDRGain found in file metadata."
+        )
 
     if maker33 < 1.0:
         if maker48 <= 0.01:

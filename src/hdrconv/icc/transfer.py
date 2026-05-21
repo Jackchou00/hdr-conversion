@@ -121,10 +121,23 @@ def _linearize_array_with_icc_curv(trc_dict, img_array):
         return np.interp(X, xp, yp)
 
 
-# TODO: Add docstring (Args, Returns, description).
 def linearize_array_with_icc(
     icc_file: bytes | str | Path, img_array: np.ndarray
 ) -> np.ndarray:
+    """Linearize an sRGB-encoded image array using ICC TRC curves.
+
+    Args:
+        icc_file: ICC profile as bytes, file path, or Path object.
+        img_array: Input image array, float32 in [0, 1].
+
+    Returns:
+        Linearized image array, float32.
+    """
+    # Intentional design: use only the first available TRC (rTRC > gTRC > bTRC)
+    # and apply it uniformly to all channels.  This is correct for profiles
+    # where all channels share the same TRC (the common case), and avoids
+    # per-channel splitting complexity.
+    # TODO: Support per-channel TRC for profiles with distinct r/g/b curves.
     result = decode_icc(icc_file)
     rtrc = result["tag_data"].get("rTRC")
     gtrc = result["tag_data"].get("gTRC")
