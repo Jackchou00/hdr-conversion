@@ -895,13 +895,23 @@ def _decode_video_item_to_array(
 
 
 def _parse_grid_item_payload(data: bytes) -> tuple[int, int, int, int]:
-    if len(data) != 8:
+    # Dispatch by payload length, not version byte.
+    # The spec defines version 0 (8 bytes, uint16 dims) and version 1 (12 bytes, uint32 dims),
+    # but some encoders (e.g. Huawei) emit 12-byte payloads with version byte = 0.
+    # Both layouts share the same rows/cols offsets at [2] and [3]; only the dimension
+    # field width differs. Length-based dispatch handles all known variants correctly.
+    if len(data) == 8:
+        rows = data[2] + 1
+        cols = data[3] + 1
+        width = int.from_bytes(data[4:6], "big")
+        height = int.from_bytes(data[6:8], "big")
+    elif len(data) == 12:
+        rows = data[2] + 1
+        cols = data[3] + 1
+        width = int.from_bytes(data[4:8], "big")
+        height = int.from_bytes(data[8:12], "big")
+    else:
         raise ValueError(f"Unsupported grid item payload length: {len(data)}")
-
-    rows = data[2] + 1
-    cols = data[3] + 1
-    width = int.from_bytes(data[4:6], "big")
-    height = int.from_bytes(data[6:8], "big")
     return rows, cols, width, height
 
 
