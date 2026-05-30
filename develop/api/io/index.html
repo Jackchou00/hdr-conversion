@@ -943,31 +943,31 @@ parser.</p>
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/hdrconv/io/iso21496.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-1408">1408</a></span>
-<span class="normal"><a href="#__codelineno-0-1409">1409</a></span>
-<span class="normal"><a href="#__codelineno-0-1410">1410</a></span>
-<span class="normal"><a href="#__codelineno-0-1411">1411</a></span>
-<span class="normal"><a href="#__codelineno-0-1412">1412</a></span>
-<span class="normal"><a href="#__codelineno-0-1413">1413</a></span>
-<span class="normal"><a href="#__codelineno-0-1414">1414</a></span>
-<span class="normal"><a href="#__codelineno-0-1415">1415</a></span>
-<span class="normal"><a href="#__codelineno-0-1416">1416</a></span>
-<span class="normal"><a href="#__codelineno-0-1417">1417</a></span>
-<span class="normal"><a href="#__codelineno-0-1418">1418</a></span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-1418">1418</a></span>
 <span class="normal"><a href="#__codelineno-0-1419">1419</a></span>
-<span class="normal"><a href="#__codelineno-0-1420">1420</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__linenumbers__-0-1408"><a id="__codelineno-0-1408" name="__codelineno-0-1408"></a><span class="k">def</span><span class="w"> </span><span class="nf">read_21496</span><span class="p">(</span><span class="n">filepath</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">GainmapImage</span><span class="p">:</span>
-</span><span id="__linenumbers__-0-1409"><a id="__codelineno-0-1409" name="__codelineno-0-1409"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Read an ISO 21496-1 Gainmap image.</span>
-</span><span id="__linenumbers__-0-1410"><a id="__codelineno-0-1410" name="__codelineno-0-1410"></a>
-</span><span id="__linenumbers__-0-1411"><a id="__codelineno-0-1411" name="__codelineno-0-1411"></a><span class="sd">    Routes JPEG files to the MPF parser and HEIF/AVIF files to the ISOBMFF</span>
-</span><span id="__linenumbers__-0-1412"><a id="__codelineno-0-1412" name="__codelineno-0-1412"></a><span class="sd">    parser.</span>
-</span><span id="__linenumbers__-0-1413"><a id="__codelineno-0-1413" name="__codelineno-0-1413"></a><span class="sd">    &quot;&quot;&quot;</span>
-</span><span id="__linenumbers__-0-1414"><a id="__codelineno-0-1414" name="__codelineno-0-1414"></a>    <span class="n">container</span> <span class="o">=</span> <span class="n">_detect_21496_container</span><span class="p">(</span><span class="n">filepath</span><span class="p">)</span>
-</span><span id="__linenumbers__-0-1415"><a id="__codelineno-0-1415" name="__codelineno-0-1415"></a>    <span class="k">if</span> <span class="n">container</span> <span class="o">==</span> <span class="s2">&quot;jpeg&quot;</span><span class="p">:</span>
-</span><span id="__linenumbers__-0-1416"><a id="__codelineno-0-1416" name="__codelineno-0-1416"></a>        <span class="k">return</span> <span class="n">_read_21496_jpeg</span><span class="p">(</span><span class="n">filepath</span><span class="p">)</span>
-</span><span id="__linenumbers__-0-1417"><a id="__codelineno-0-1417" name="__codelineno-0-1417"></a>    <span class="k">if</span> <span class="n">container</span> <span class="o">==</span> <span class="s2">&quot;isobmff&quot;</span><span class="p">:</span>
-</span><span id="__linenumbers__-0-1418"><a id="__codelineno-0-1418" name="__codelineno-0-1418"></a>        <span class="k">return</span> <span class="n">_read_21496_isobmff</span><span class="p">(</span><span class="n">filepath</span><span class="p">)</span>
-</span><span id="__linenumbers__-0-1419"><a id="__codelineno-0-1419" name="__codelineno-0-1419"></a>
-</span><span id="__linenumbers__-0-1420"><a id="__codelineno-0-1420" name="__codelineno-0-1420"></a>    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Unsupported ISO 21496-1 container format: </span><span class="si">{</span><span class="n">filepath</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+<span class="normal"><a href="#__codelineno-0-1420">1420</a></span>
+<span class="normal"><a href="#__codelineno-0-1421">1421</a></span>
+<span class="normal"><a href="#__codelineno-0-1422">1422</a></span>
+<span class="normal"><a href="#__codelineno-0-1423">1423</a></span>
+<span class="normal"><a href="#__codelineno-0-1424">1424</a></span>
+<span class="normal"><a href="#__codelineno-0-1425">1425</a></span>
+<span class="normal"><a href="#__codelineno-0-1426">1426</a></span>
+<span class="normal"><a href="#__codelineno-0-1427">1427</a></span>
+<span class="normal"><a href="#__codelineno-0-1428">1428</a></span>
+<span class="normal"><a href="#__codelineno-0-1429">1429</a></span>
+<span class="normal"><a href="#__codelineno-0-1430">1430</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__linenumbers__-0-1418"><a id="__codelineno-0-1418" name="__codelineno-0-1418"></a><span class="k">def</span><span class="w"> </span><span class="nf">read_21496</span><span class="p">(</span><span class="n">filepath</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">GainmapImage</span><span class="p">:</span>
+</span><span id="__linenumbers__-0-1419"><a id="__codelineno-0-1419" name="__codelineno-0-1419"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Read an ISO 21496-1 Gainmap image.</span>
+</span><span id="__linenumbers__-0-1420"><a id="__codelineno-0-1420" name="__codelineno-0-1420"></a>
+</span><span id="__linenumbers__-0-1421"><a id="__codelineno-0-1421" name="__codelineno-0-1421"></a><span class="sd">    Routes JPEG files to the MPF parser and HEIF/AVIF files to the ISOBMFF</span>
+</span><span id="__linenumbers__-0-1422"><a id="__codelineno-0-1422" name="__codelineno-0-1422"></a><span class="sd">    parser.</span>
+</span><span id="__linenumbers__-0-1423"><a id="__codelineno-0-1423" name="__codelineno-0-1423"></a><span class="sd">    &quot;&quot;&quot;</span>
+</span><span id="__linenumbers__-0-1424"><a id="__codelineno-0-1424" name="__codelineno-0-1424"></a>    <span class="n">container</span> <span class="o">=</span> <span class="n">_detect_21496_container</span><span class="p">(</span><span class="n">filepath</span><span class="p">)</span>
+</span><span id="__linenumbers__-0-1425"><a id="__codelineno-0-1425" name="__codelineno-0-1425"></a>    <span class="k">if</span> <span class="n">container</span> <span class="o">==</span> <span class="s2">&quot;jpeg&quot;</span><span class="p">:</span>
+</span><span id="__linenumbers__-0-1426"><a id="__codelineno-0-1426" name="__codelineno-0-1426"></a>        <span class="k">return</span> <span class="n">_read_21496_jpeg</span><span class="p">(</span><span class="n">filepath</span><span class="p">)</span>
+</span><span id="__linenumbers__-0-1427"><a id="__codelineno-0-1427" name="__codelineno-0-1427"></a>    <span class="k">if</span> <span class="n">container</span> <span class="o">==</span> <span class="s2">&quot;isobmff&quot;</span><span class="p">:</span>
+</span><span id="__linenumbers__-0-1428"><a id="__codelineno-0-1428" name="__codelineno-0-1428"></a>        <span class="k">return</span> <span class="n">_read_21496_isobmff</span><span class="p">(</span><span class="n">filepath</span><span class="p">)</span>
+</span><span id="__linenumbers__-0-1429"><a id="__codelineno-0-1429" name="__codelineno-0-1429"></a>
+</span><span id="__linenumbers__-0-1430"><a id="__codelineno-0-1430" name="__codelineno-0-1430"></a>    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Unsupported ISO 21496-1 container format: </span><span class="si">{</span><span class="n">filepath</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
 </span></code></pre></div></td></tr></table></div>
             </details>
     </div>
@@ -1114,17 +1114,7 @@ JPEG quality is set to 95 with 4:4:4 chroma subsampling.</p>
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/hdrconv/io/iso21496.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-1423">1423</a></span>
-<span class="normal"><a href="#__codelineno-0-1424">1424</a></span>
-<span class="normal"><a href="#__codelineno-0-1425">1425</a></span>
-<span class="normal"><a href="#__codelineno-0-1426">1426</a></span>
-<span class="normal"><a href="#__codelineno-0-1427">1427</a></span>
-<span class="normal"><a href="#__codelineno-0-1428">1428</a></span>
-<span class="normal"><a href="#__codelineno-0-1429">1429</a></span>
-<span class="normal"><a href="#__codelineno-0-1430">1430</a></span>
-<span class="normal"><a href="#__codelineno-0-1431">1431</a></span>
-<span class="normal"><a href="#__codelineno-0-1432">1432</a></span>
-<span class="normal"><a href="#__codelineno-0-1433">1433</a></span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-1433">1433</a></span>
 <span class="normal"><a href="#__codelineno-0-1434">1434</a></span>
 <span class="normal"><a href="#__codelineno-0-1435">1435</a></span>
 <span class="normal"><a href="#__codelineno-0-1436">1436</a></span>
@@ -1217,110 +1207,120 @@ JPEG quality is set to 95 with 4:4:4 chroma subsampling.</p>
 <span class="normal"><a href="#__codelineno-0-1523">1523</a></span>
 <span class="normal"><a href="#__codelineno-0-1524">1524</a></span>
 <span class="normal"><a href="#__codelineno-0-1525">1525</a></span>
-<span class="normal"><a href="#__codelineno-0-1526">1526</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__linenumbers__-0-1423"><a id="__codelineno-0-1423" name="__codelineno-0-1423"></a><span class="k">def</span><span class="w"> </span><span class="nf">write_21496</span><span class="p">(</span>
-</span><span id="__linenumbers__-0-1424"><a id="__codelineno-0-1424" name="__codelineno-0-1424"></a>    <span class="n">data</span><span class="p">:</span> <span class="n">GainmapImage</span><span class="p">,</span>
-</span><span id="__linenumbers__-0-1425"><a id="__codelineno-0-1425" name="__codelineno-0-1425"></a>    <span class="n">filepath</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
-</span><span id="__linenumbers__-0-1426"><a id="__codelineno-0-1426" name="__codelineno-0-1426"></a>    <span class="n">baseline_quality</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">95</span><span class="p">,</span>
-</span><span id="__linenumbers__-0-1427"><a id="__codelineno-0-1427" name="__codelineno-0-1427"></a>    <span class="n">gainmap_quality</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">95</span><span class="p">,</span>
-</span><span id="__linenumbers__-0-1428"><a id="__codelineno-0-1428" name="__codelineno-0-1428"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="__linenumbers__-0-1429"><a id="__codelineno-0-1429" name="__codelineno-0-1429"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Write ISO 21496-1 Gainmap JPEG file.</span>
-</span><span id="__linenumbers__-0-1430"><a id="__codelineno-0-1430" name="__codelineno-0-1430"></a>
-</span><span id="__linenumbers__-0-1431"><a id="__codelineno-0-1431" name="__codelineno-0-1431"></a><span class="sd">    Creates a JPEG file with ISO 21496-1 compliant gainmap structure using</span>
-</span><span id="__linenumbers__-0-1432"><a id="__codelineno-0-1432" name="__codelineno-0-1432"></a><span class="sd">    Multi-Picture Format (MPF) container.</span>
-</span><span id="__linenumbers__-0-1433"><a id="__codelineno-0-1433" name="__codelineno-0-1433"></a>
-</span><span id="__linenumbers__-0-1434"><a id="__codelineno-0-1434" name="__codelineno-0-1434"></a><span class="sd">    Args:</span>
-</span><span id="__linenumbers__-0-1435"><a id="__codelineno-0-1435" name="__codelineno-0-1435"></a><span class="sd">        data: GainmapImage dict containing:</span>
-</span><span id="__linenumbers__-0-1436"><a id="__codelineno-0-1436" name="__codelineno-0-1436"></a><span class="sd">            - ``baseline``: SDR image, uint8, shape (H, W, 3).</span>
-</span><span id="__linenumbers__-0-1437"><a id="__codelineno-0-1437" name="__codelineno-0-1437"></a><span class="sd">            - ``gainmap``: Gain map, uint8, shape (H, W, 3) or (H, W, 1).</span>
-</span><span id="__linenumbers__-0-1438"><a id="__codelineno-0-1438" name="__codelineno-0-1438"></a><span class="sd">            - ``metadata``: GainmapMetadata with transformation parameters.</span>
-</span><span id="__linenumbers__-0-1439"><a id="__codelineno-0-1439" name="__codelineno-0-1439"></a><span class="sd">            - ``baseline_icc``: Optional ICC profile for baseline.</span>
-</span><span id="__linenumbers__-0-1440"><a id="__codelineno-0-1440" name="__codelineno-0-1440"></a><span class="sd">            - ``gainmap_icc``: Optional ICC profile for gainmap.</span>
-</span><span id="__linenumbers__-0-1441"><a id="__codelineno-0-1441" name="__codelineno-0-1441"></a><span class="sd">        filepath: Output path for the JPEG file.</span>
-</span><span id="__linenumbers__-0-1442"><a id="__codelineno-0-1442" name="__codelineno-0-1442"></a><span class="sd">        baseline_quality: JPEG quality for baseline image (1-100, default 95).</span>
-</span><span id="__linenumbers__-0-1443"><a id="__codelineno-0-1443" name="__codelineno-0-1443"></a><span class="sd">        gainmap_quality: JPEG quality for gainmap image (1-100, default 95).</span>
-</span><span id="__linenumbers__-0-1444"><a id="__codelineno-0-1444" name="__codelineno-0-1444"></a>
-</span><span id="__linenumbers__-0-1445"><a id="__codelineno-0-1445" name="__codelineno-0-1445"></a><span class="sd">    Raises:</span>
-</span><span id="__linenumbers__-0-1446"><a id="__codelineno-0-1446" name="__codelineno-0-1446"></a><span class="sd">        RuntimeError: If file writing fails.</span>
-</span><span id="__linenumbers__-0-1447"><a id="__codelineno-0-1447" name="__codelineno-0-1447"></a>
-</span><span id="__linenumbers__-0-1448"><a id="__codelineno-0-1448" name="__codelineno-0-1448"></a><span class="sd">    Note:</span>
-</span><span id="__linenumbers__-0-1449"><a id="__codelineno-0-1449" name="__codelineno-0-1449"></a><span class="sd">        The output file structure places the baseline image first with an</span>
-</span><span id="__linenumbers__-0-1450"><a id="__codelineno-0-1450" name="__codelineno-0-1450"></a><span class="sd">        MPF index, followed by the gainmap with ISO 21496-1 metadata.</span>
-</span><span id="__linenumbers__-0-1451"><a id="__codelineno-0-1451" name="__codelineno-0-1451"></a><span class="sd">        JPEG quality is set to 95 with 4:4:4 chroma subsampling.</span>
-</span><span id="__linenumbers__-0-1452"><a id="__codelineno-0-1452" name="__codelineno-0-1452"></a>
-</span><span id="__linenumbers__-0-1453"><a id="__codelineno-0-1453" name="__codelineno-0-1453"></a><span class="sd">    See Also:</span>
-</span><span id="__linenumbers__-0-1454"><a id="__codelineno-0-1454" name="__codelineno-0-1454"></a><span class="sd">        - `read_21496`: Read ISO 21496-1 Gainmap JPEG.</span>
-</span><span id="__linenumbers__-0-1455"><a id="__codelineno-0-1455" name="__codelineno-0-1455"></a><span class="sd">        - `hdr_to_gainmap`: Convert HDR image to GainmapImage.</span>
-</span><span id="__linenumbers__-0-1456"><a id="__codelineno-0-1456" name="__codelineno-0-1456"></a><span class="sd">    &quot;&quot;&quot;</span>
-</span><span id="__linenumbers__-0-1457"><a id="__codelineno-0-1457" name="__codelineno-0-1457"></a>    <span class="k">try</span><span class="p">:</span>
-</span><span id="__linenumbers__-0-1458"><a id="__codelineno-0-1458" name="__codelineno-0-1458"></a>        <span class="c1"># Step 1: Encode gainmap image</span>
-</span><span id="__linenumbers__-0-1459"><a id="__codelineno-0-1459" name="__codelineno-0-1459"></a>        <span class="n">gainmap_bytes_raw</span> <span class="o">=</span> <span class="n">_create_jpeg_bytes</span><span class="p">(</span>
-</span><span id="__linenumbers__-0-1460"><a id="__codelineno-0-1460" name="__codelineno-0-1460"></a>            <span class="n">data</span><span class="p">[</span><span class="s2">&quot;gainmap&quot;</span><span class="p">],</span> <span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;gainmap_icc&quot;</span><span class="p">),</span> <span class="n">gainmap_quality</span>
-</span><span id="__linenumbers__-0-1461"><a id="__codelineno-0-1461" name="__codelineno-0-1461"></a>        <span class="p">)</span>
+<span class="normal"><a href="#__codelineno-0-1526">1526</a></span>
+<span class="normal"><a href="#__codelineno-0-1527">1527</a></span>
+<span class="normal"><a href="#__codelineno-0-1528">1528</a></span>
+<span class="normal"><a href="#__codelineno-0-1529">1529</a></span>
+<span class="normal"><a href="#__codelineno-0-1530">1530</a></span>
+<span class="normal"><a href="#__codelineno-0-1531">1531</a></span>
+<span class="normal"><a href="#__codelineno-0-1532">1532</a></span>
+<span class="normal"><a href="#__codelineno-0-1533">1533</a></span>
+<span class="normal"><a href="#__codelineno-0-1534">1534</a></span>
+<span class="normal"><a href="#__codelineno-0-1535">1535</a></span>
+<span class="normal"><a href="#__codelineno-0-1536">1536</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__linenumbers__-0-1433"><a id="__codelineno-0-1433" name="__codelineno-0-1433"></a><span class="k">def</span><span class="w"> </span><span class="nf">write_21496</span><span class="p">(</span>
+</span><span id="__linenumbers__-0-1434"><a id="__codelineno-0-1434" name="__codelineno-0-1434"></a>    <span class="n">data</span><span class="p">:</span> <span class="n">GainmapImage</span><span class="p">,</span>
+</span><span id="__linenumbers__-0-1435"><a id="__codelineno-0-1435" name="__codelineno-0-1435"></a>    <span class="n">filepath</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+</span><span id="__linenumbers__-0-1436"><a id="__codelineno-0-1436" name="__codelineno-0-1436"></a>    <span class="n">baseline_quality</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">95</span><span class="p">,</span>
+</span><span id="__linenumbers__-0-1437"><a id="__codelineno-0-1437" name="__codelineno-0-1437"></a>    <span class="n">gainmap_quality</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">95</span><span class="p">,</span>
+</span><span id="__linenumbers__-0-1438"><a id="__codelineno-0-1438" name="__codelineno-0-1438"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="__linenumbers__-0-1439"><a id="__codelineno-0-1439" name="__codelineno-0-1439"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Write ISO 21496-1 Gainmap JPEG file.</span>
+</span><span id="__linenumbers__-0-1440"><a id="__codelineno-0-1440" name="__codelineno-0-1440"></a>
+</span><span id="__linenumbers__-0-1441"><a id="__codelineno-0-1441" name="__codelineno-0-1441"></a><span class="sd">    Creates a JPEG file with ISO 21496-1 compliant gainmap structure using</span>
+</span><span id="__linenumbers__-0-1442"><a id="__codelineno-0-1442" name="__codelineno-0-1442"></a><span class="sd">    Multi-Picture Format (MPF) container.</span>
+</span><span id="__linenumbers__-0-1443"><a id="__codelineno-0-1443" name="__codelineno-0-1443"></a>
+</span><span id="__linenumbers__-0-1444"><a id="__codelineno-0-1444" name="__codelineno-0-1444"></a><span class="sd">    Args:</span>
+</span><span id="__linenumbers__-0-1445"><a id="__codelineno-0-1445" name="__codelineno-0-1445"></a><span class="sd">        data: GainmapImage dict containing:</span>
+</span><span id="__linenumbers__-0-1446"><a id="__codelineno-0-1446" name="__codelineno-0-1446"></a><span class="sd">            - ``baseline``: SDR image, uint8, shape (H, W, 3).</span>
+</span><span id="__linenumbers__-0-1447"><a id="__codelineno-0-1447" name="__codelineno-0-1447"></a><span class="sd">            - ``gainmap``: Gain map, uint8, shape (H, W, 3) or (H, W, 1).</span>
+</span><span id="__linenumbers__-0-1448"><a id="__codelineno-0-1448" name="__codelineno-0-1448"></a><span class="sd">            - ``metadata``: GainmapMetadata with transformation parameters.</span>
+</span><span id="__linenumbers__-0-1449"><a id="__codelineno-0-1449" name="__codelineno-0-1449"></a><span class="sd">            - ``baseline_icc``: Optional ICC profile for baseline.</span>
+</span><span id="__linenumbers__-0-1450"><a id="__codelineno-0-1450" name="__codelineno-0-1450"></a><span class="sd">            - ``gainmap_icc``: Optional ICC profile for gainmap.</span>
+</span><span id="__linenumbers__-0-1451"><a id="__codelineno-0-1451" name="__codelineno-0-1451"></a><span class="sd">        filepath: Output path for the JPEG file.</span>
+</span><span id="__linenumbers__-0-1452"><a id="__codelineno-0-1452" name="__codelineno-0-1452"></a><span class="sd">        baseline_quality: JPEG quality for baseline image (1-100, default 95).</span>
+</span><span id="__linenumbers__-0-1453"><a id="__codelineno-0-1453" name="__codelineno-0-1453"></a><span class="sd">        gainmap_quality: JPEG quality for gainmap image (1-100, default 95).</span>
+</span><span id="__linenumbers__-0-1454"><a id="__codelineno-0-1454" name="__codelineno-0-1454"></a>
+</span><span id="__linenumbers__-0-1455"><a id="__codelineno-0-1455" name="__codelineno-0-1455"></a><span class="sd">    Raises:</span>
+</span><span id="__linenumbers__-0-1456"><a id="__codelineno-0-1456" name="__codelineno-0-1456"></a><span class="sd">        RuntimeError: If file writing fails.</span>
+</span><span id="__linenumbers__-0-1457"><a id="__codelineno-0-1457" name="__codelineno-0-1457"></a>
+</span><span id="__linenumbers__-0-1458"><a id="__codelineno-0-1458" name="__codelineno-0-1458"></a><span class="sd">    Note:</span>
+</span><span id="__linenumbers__-0-1459"><a id="__codelineno-0-1459" name="__codelineno-0-1459"></a><span class="sd">        The output file structure places the baseline image first with an</span>
+</span><span id="__linenumbers__-0-1460"><a id="__codelineno-0-1460" name="__codelineno-0-1460"></a><span class="sd">        MPF index, followed by the gainmap with ISO 21496-1 metadata.</span>
+</span><span id="__linenumbers__-0-1461"><a id="__codelineno-0-1461" name="__codelineno-0-1461"></a><span class="sd">        JPEG quality is set to 95 with 4:4:4 chroma subsampling.</span>
 </span><span id="__linenumbers__-0-1462"><a id="__codelineno-0-1462" name="__codelineno-0-1462"></a>
-</span><span id="__linenumbers__-0-1463"><a id="__codelineno-0-1463" name="__codelineno-0-1463"></a>        <span class="c1"># Step 1.1: Insert minimal MPF APP2 in gainmap stream for compatibility</span>
-</span><span id="__linenumbers__-0-1464"><a id="__codelineno-0-1464" name="__codelineno-0-1464"></a>        <span class="n">gainmap_mpf_segment</span> <span class="o">=</span> <span class="n">_build_app2_segment</span><span class="p">(</span><span class="n">_build_mpf_minimal_payload</span><span class="p">(</span><span class="mi">2</span><span class="p">))</span>
-</span><span id="__linenumbers__-0-1465"><a id="__codelineno-0-1465" name="__codelineno-0-1465"></a>
-</span><span id="__linenumbers__-0-1466"><a id="__codelineno-0-1466" name="__codelineno-0-1466"></a>        <span class="c1"># Step 2: Build ISO 21496-1 metadata segment (APP2)</span>
-</span><span id="__linenumbers__-0-1467"><a id="__codelineno-0-1467" name="__codelineno-0-1467"></a>        <span class="n">iso_payload</span> <span class="o">=</span> <span class="n">_encode_iso21496_metadata</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s2">&quot;metadata&quot;</span><span class="p">])</span>
-</span><span id="__linenumbers__-0-1468"><a id="__codelineno-0-1468" name="__codelineno-0-1468"></a>        <span class="n">iso_segment</span> <span class="o">=</span> <span class="n">_build_app2_segment</span><span class="p">(</span><span class="n">iso_payload</span><span class="p">)</span>
-</span><span id="__linenumbers__-0-1469"><a id="__codelineno-0-1469" name="__codelineno-0-1469"></a>
-</span><span id="__linenumbers__-0-1470"><a id="__codelineno-0-1470" name="__codelineno-0-1470"></a>        <span class="c1"># Insert ISO segment after SOI (0xFFD8) in gainmap</span>
-</span><span id="__linenumbers__-0-1471"><a id="__codelineno-0-1471" name="__codelineno-0-1471"></a>        <span class="n">gainmap_final</span> <span class="o">=</span> <span class="p">(</span>
-</span><span id="__linenumbers__-0-1472"><a id="__codelineno-0-1472" name="__codelineno-0-1472"></a>            <span class="n">gainmap_bytes_raw</span><span class="p">[:</span><span class="mi">2</span><span class="p">]</span>
-</span><span id="__linenumbers__-0-1473"><a id="__codelineno-0-1473" name="__codelineno-0-1473"></a>            <span class="o">+</span> <span class="n">gainmap_mpf_segment</span>
-</span><span id="__linenumbers__-0-1474"><a id="__codelineno-0-1474" name="__codelineno-0-1474"></a>            <span class="o">+</span> <span class="n">iso_segment</span>
-</span><span id="__linenumbers__-0-1475"><a id="__codelineno-0-1475" name="__codelineno-0-1475"></a>            <span class="o">+</span> <span class="n">gainmap_bytes_raw</span><span class="p">[</span><span class="mi">2</span><span class="p">:]</span>
-</span><span id="__linenumbers__-0-1476"><a id="__codelineno-0-1476" name="__codelineno-0-1476"></a>        <span class="p">)</span>
-</span><span id="__linenumbers__-0-1477"><a id="__codelineno-0-1477" name="__codelineno-0-1477"></a>
-</span><span id="__linenumbers__-0-1478"><a id="__codelineno-0-1478" name="__codelineno-0-1478"></a>        <span class="c1"># Step 3: Encode baseline image</span>
-</span><span id="__linenumbers__-0-1479"><a id="__codelineno-0-1479" name="__codelineno-0-1479"></a>        <span class="n">primary_bytes_raw</span> <span class="o">=</span> <span class="n">_create_jpeg_bytes</span><span class="p">(</span>
-</span><span id="__linenumbers__-0-1480"><a id="__codelineno-0-1480" name="__codelineno-0-1480"></a>            <span class="n">data</span><span class="p">[</span><span class="s2">&quot;baseline&quot;</span><span class="p">],</span> <span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;baseline_icc&quot;</span><span class="p">),</span> <span class="n">baseline_quality</span>
-</span><span id="__linenumbers__-0-1481"><a id="__codelineno-0-1481" name="__codelineno-0-1481"></a>        <span class="p">)</span>
-</span><span id="__linenumbers__-0-1482"><a id="__codelineno-0-1482" name="__codelineno-0-1482"></a>
-</span><span id="__linenumbers__-0-1483"><a id="__codelineno-0-1483" name="__codelineno-0-1483"></a>        <span class="c1"># Step 3.1: Insert URN stub APP2 in primary stream for compatibility</span>
-</span><span id="__linenumbers__-0-1484"><a id="__codelineno-0-1484" name="__codelineno-0-1484"></a>        <span class="n">primary_stub_segment</span> <span class="o">=</span> <span class="n">_build_app2_segment</span><span class="p">(</span><span class="n">ISO21496_URN</span> <span class="o">+</span> <span class="sa">b</span><span class="s2">&quot;</span><span class="se">\x00\x00\x00\x00</span><span class="s2">&quot;</span><span class="p">)</span>
-</span><span id="__linenumbers__-0-1485"><a id="__codelineno-0-1485" name="__codelineno-0-1485"></a>
-</span><span id="__linenumbers__-0-1486"><a id="__codelineno-0-1486" name="__codelineno-0-1486"></a>        <span class="c1"># Step 4: Build MPF index segment (APP2)</span>
-</span><span id="__linenumbers__-0-1487"><a id="__codelineno-0-1487" name="__codelineno-0-1487"></a>        <span class="c1"># MPF points to gainmap at end of file</span>
-</span><span id="__linenumbers__-0-1488"><a id="__codelineno-0-1488" name="__codelineno-0-1488"></a>
-</span><span id="__linenumbers__-0-1489"><a id="__codelineno-0-1489" name="__codelineno-0-1489"></a>        <span class="c1"># Step 4.1: Generate MPF payload with placeholder offset for length calculation</span>
-</span><span id="__linenumbers__-0-1490"><a id="__codelineno-0-1490" name="__codelineno-0-1490"></a>        <span class="n">mpf_payload_temp</span> <span class="o">=</span> <span class="n">_build_mpf_payload</span><span class="p">(</span>
-</span><span id="__linenumbers__-0-1491"><a id="__codelineno-0-1491" name="__codelineno-0-1491"></a>            <span class="n">primary_size</span><span class="o">=</span><span class="nb">len</span><span class="p">(</span><span class="n">primary_bytes_raw</span><span class="p">),</span>
-</span><span id="__linenumbers__-0-1492"><a id="__codelineno-0-1492" name="__codelineno-0-1492"></a>            <span class="n">gainmap_size</span><span class="o">=</span><span class="nb">len</span><span class="p">(</span><span class="n">gainmap_final</span><span class="p">),</span>
-</span><span id="__linenumbers__-0-1493"><a id="__codelineno-0-1493" name="__codelineno-0-1493"></a>            <span class="n">gainmap_offset</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>  <span class="c1"># Placeholder</span>
-</span><span id="__linenumbers__-0-1494"><a id="__codelineno-0-1494" name="__codelineno-0-1494"></a>        <span class="p">)</span>
-</span><span id="__linenumbers__-0-1495"><a id="__codelineno-0-1495" name="__codelineno-0-1495"></a>        <span class="n">mpf_segment_temp</span> <span class="o">=</span> <span class="n">_build_app2_segment</span><span class="p">(</span><span class="n">mpf_payload_temp</span><span class="p">)</span>
-</span><span id="__linenumbers__-0-1496"><a id="__codelineno-0-1496" name="__codelineno-0-1496"></a>
-</span><span id="__linenumbers__-0-1497"><a id="__codelineno-0-1497" name="__codelineno-0-1497"></a>        <span class="c1"># Step 4.2: Calculate MPF-related file offsets</span>
-</span><span id="__linenumbers__-0-1498"><a id="__codelineno-0-1498" name="__codelineno-0-1498"></a>        <span class="n">_</span><span class="p">,</span> <span class="n">gainmap_relative_offset</span><span class="p">,</span> <span class="n">total_primary_len</span> <span class="o">=</span> <span class="n">_calculate_mpf_offsets</span><span class="p">(</span>
-</span><span id="__linenumbers__-0-1499"><a id="__codelineno-0-1499" name="__codelineno-0-1499"></a>            <span class="n">primary_bytes_raw</span><span class="p">,</span>
-</span><span id="__linenumbers__-0-1500"><a id="__codelineno-0-1500" name="__codelineno-0-1500"></a>            <span class="n">primary_stub_segment</span><span class="p">,</span>
-</span><span id="__linenumbers__-0-1501"><a id="__codelineno-0-1501" name="__codelineno-0-1501"></a>            <span class="n">mpf_segment_temp</span><span class="p">,</span>
-</span><span id="__linenumbers__-0-1502"><a id="__codelineno-0-1502" name="__codelineno-0-1502"></a>        <span class="p">)</span>
-</span><span id="__linenumbers__-0-1503"><a id="__codelineno-0-1503" name="__codelineno-0-1503"></a>
-</span><span id="__linenumbers__-0-1504"><a id="__codelineno-0-1504" name="__codelineno-0-1504"></a>        <span class="c1"># Step 4.3: Regenerate MPF with correct primary size and gainmap offset</span>
-</span><span id="__linenumbers__-0-1505"><a id="__codelineno-0-1505" name="__codelineno-0-1505"></a>        <span class="n">mpf_payload_final</span> <span class="o">=</span> <span class="n">_build_mpf_payload</span><span class="p">(</span>
-</span><span id="__linenumbers__-0-1506"><a id="__codelineno-0-1506" name="__codelineno-0-1506"></a>            <span class="n">primary_size</span><span class="o">=</span><span class="n">total_primary_len</span><span class="p">,</span>
-</span><span id="__linenumbers__-0-1507"><a id="__codelineno-0-1507" name="__codelineno-0-1507"></a>            <span class="n">gainmap_size</span><span class="o">=</span><span class="nb">len</span><span class="p">(</span><span class="n">gainmap_final</span><span class="p">),</span>
-</span><span id="__linenumbers__-0-1508"><a id="__codelineno-0-1508" name="__codelineno-0-1508"></a>            <span class="n">gainmap_offset</span><span class="o">=</span><span class="n">gainmap_relative_offset</span><span class="p">,</span>
-</span><span id="__linenumbers__-0-1509"><a id="__codelineno-0-1509" name="__codelineno-0-1509"></a>        <span class="p">)</span>
-</span><span id="__linenumbers__-0-1510"><a id="__codelineno-0-1510" name="__codelineno-0-1510"></a>        <span class="n">mpf_segment_final</span> <span class="o">=</span> <span class="n">_build_app2_segment</span><span class="p">(</span><span class="n">mpf_payload_final</span><span class="p">)</span>
-</span><span id="__linenumbers__-0-1511"><a id="__codelineno-0-1511" name="__codelineno-0-1511"></a>
-</span><span id="__linenumbers__-0-1512"><a id="__codelineno-0-1512" name="__codelineno-0-1512"></a>        <span class="c1"># Step 5: Assemble baseline stream with MPF</span>
-</span><span id="__linenumbers__-0-1513"><a id="__codelineno-0-1513" name="__codelineno-0-1513"></a>        <span class="n">primary_final</span> <span class="o">=</span> <span class="p">(</span>
-</span><span id="__linenumbers__-0-1514"><a id="__codelineno-0-1514" name="__codelineno-0-1514"></a>            <span class="n">primary_bytes_raw</span><span class="p">[:</span><span class="mi">2</span><span class="p">]</span>
-</span><span id="__linenumbers__-0-1515"><a id="__codelineno-0-1515" name="__codelineno-0-1515"></a>            <span class="o">+</span> <span class="n">primary_stub_segment</span>
-</span><span id="__linenumbers__-0-1516"><a id="__codelineno-0-1516" name="__codelineno-0-1516"></a>            <span class="o">+</span> <span class="n">mpf_segment_final</span>
-</span><span id="__linenumbers__-0-1517"><a id="__codelineno-0-1517" name="__codelineno-0-1517"></a>            <span class="o">+</span> <span class="n">primary_bytes_raw</span><span class="p">[</span><span class="mi">2</span><span class="p">:]</span>
-</span><span id="__linenumbers__-0-1518"><a id="__codelineno-0-1518" name="__codelineno-0-1518"></a>        <span class="p">)</span>
-</span><span id="__linenumbers__-0-1519"><a id="__codelineno-0-1519" name="__codelineno-0-1519"></a>
-</span><span id="__linenumbers__-0-1520"><a id="__codelineno-0-1520" name="__codelineno-0-1520"></a>        <span class="c1"># Step 6: Write file (baseline + gainmap)</span>
-</span><span id="__linenumbers__-0-1521"><a id="__codelineno-0-1521" name="__codelineno-0-1521"></a>        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">filepath</span><span class="p">,</span> <span class="s2">&quot;wb&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
-</span><span id="__linenumbers__-0-1522"><a id="__codelineno-0-1522" name="__codelineno-0-1522"></a>            <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">primary_final</span><span class="p">)</span>
-</span><span id="__linenumbers__-0-1523"><a id="__codelineno-0-1523" name="__codelineno-0-1523"></a>            <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">gainmap_final</span><span class="p">)</span>
-</span><span id="__linenumbers__-0-1524"><a id="__codelineno-0-1524" name="__codelineno-0-1524"></a>
-</span><span id="__linenumbers__-0-1525"><a id="__codelineno-0-1525" name="__codelineno-0-1525"></a>    <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
-</span><span id="__linenumbers__-0-1526"><a id="__codelineno-0-1526" name="__codelineno-0-1526"></a>        <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Failed to write ISO 21496-1 file: </span><span class="si">{</span><span class="n">filepath</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="nn">e</span>
+</span><span id="__linenumbers__-0-1463"><a id="__codelineno-0-1463" name="__codelineno-0-1463"></a><span class="sd">    See Also:</span>
+</span><span id="__linenumbers__-0-1464"><a id="__codelineno-0-1464" name="__codelineno-0-1464"></a><span class="sd">        - `read_21496`: Read ISO 21496-1 Gainmap JPEG.</span>
+</span><span id="__linenumbers__-0-1465"><a id="__codelineno-0-1465" name="__codelineno-0-1465"></a><span class="sd">        - `hdr_to_gainmap`: Convert HDR image to GainmapImage.</span>
+</span><span id="__linenumbers__-0-1466"><a id="__codelineno-0-1466" name="__codelineno-0-1466"></a><span class="sd">    &quot;&quot;&quot;</span>
+</span><span id="__linenumbers__-0-1467"><a id="__codelineno-0-1467" name="__codelineno-0-1467"></a>    <span class="k">try</span><span class="p">:</span>
+</span><span id="__linenumbers__-0-1468"><a id="__codelineno-0-1468" name="__codelineno-0-1468"></a>        <span class="c1"># Step 1: Encode gainmap image</span>
+</span><span id="__linenumbers__-0-1469"><a id="__codelineno-0-1469" name="__codelineno-0-1469"></a>        <span class="n">gainmap_bytes_raw</span> <span class="o">=</span> <span class="n">_create_jpeg_bytes</span><span class="p">(</span>
+</span><span id="__linenumbers__-0-1470"><a id="__codelineno-0-1470" name="__codelineno-0-1470"></a>            <span class="n">data</span><span class="p">[</span><span class="s2">&quot;gainmap&quot;</span><span class="p">],</span> <span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;gainmap_icc&quot;</span><span class="p">),</span> <span class="n">gainmap_quality</span>
+</span><span id="__linenumbers__-0-1471"><a id="__codelineno-0-1471" name="__codelineno-0-1471"></a>        <span class="p">)</span>
+</span><span id="__linenumbers__-0-1472"><a id="__codelineno-0-1472" name="__codelineno-0-1472"></a>
+</span><span id="__linenumbers__-0-1473"><a id="__codelineno-0-1473" name="__codelineno-0-1473"></a>        <span class="c1"># Step 1.1: Insert minimal MPF APP2 in gainmap stream for compatibility</span>
+</span><span id="__linenumbers__-0-1474"><a id="__codelineno-0-1474" name="__codelineno-0-1474"></a>        <span class="n">gainmap_mpf_segment</span> <span class="o">=</span> <span class="n">_build_app2_segment</span><span class="p">(</span><span class="n">_build_mpf_minimal_payload</span><span class="p">(</span><span class="mi">2</span><span class="p">))</span>
+</span><span id="__linenumbers__-0-1475"><a id="__codelineno-0-1475" name="__codelineno-0-1475"></a>
+</span><span id="__linenumbers__-0-1476"><a id="__codelineno-0-1476" name="__codelineno-0-1476"></a>        <span class="c1"># Step 2: Build ISO 21496-1 metadata segment (APP2)</span>
+</span><span id="__linenumbers__-0-1477"><a id="__codelineno-0-1477" name="__codelineno-0-1477"></a>        <span class="n">iso_payload</span> <span class="o">=</span> <span class="n">_encode_iso21496_metadata</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s2">&quot;metadata&quot;</span><span class="p">])</span>
+</span><span id="__linenumbers__-0-1478"><a id="__codelineno-0-1478" name="__codelineno-0-1478"></a>        <span class="n">iso_segment</span> <span class="o">=</span> <span class="n">_build_app2_segment</span><span class="p">(</span><span class="n">iso_payload</span><span class="p">)</span>
+</span><span id="__linenumbers__-0-1479"><a id="__codelineno-0-1479" name="__codelineno-0-1479"></a>
+</span><span id="__linenumbers__-0-1480"><a id="__codelineno-0-1480" name="__codelineno-0-1480"></a>        <span class="c1"># Insert ISO segment after SOI (0xFFD8) in gainmap</span>
+</span><span id="__linenumbers__-0-1481"><a id="__codelineno-0-1481" name="__codelineno-0-1481"></a>        <span class="n">gainmap_final</span> <span class="o">=</span> <span class="p">(</span>
+</span><span id="__linenumbers__-0-1482"><a id="__codelineno-0-1482" name="__codelineno-0-1482"></a>            <span class="n">gainmap_bytes_raw</span><span class="p">[:</span><span class="mi">2</span><span class="p">]</span>
+</span><span id="__linenumbers__-0-1483"><a id="__codelineno-0-1483" name="__codelineno-0-1483"></a>            <span class="o">+</span> <span class="n">gainmap_mpf_segment</span>
+</span><span id="__linenumbers__-0-1484"><a id="__codelineno-0-1484" name="__codelineno-0-1484"></a>            <span class="o">+</span> <span class="n">iso_segment</span>
+</span><span id="__linenumbers__-0-1485"><a id="__codelineno-0-1485" name="__codelineno-0-1485"></a>            <span class="o">+</span> <span class="n">gainmap_bytes_raw</span><span class="p">[</span><span class="mi">2</span><span class="p">:]</span>
+</span><span id="__linenumbers__-0-1486"><a id="__codelineno-0-1486" name="__codelineno-0-1486"></a>        <span class="p">)</span>
+</span><span id="__linenumbers__-0-1487"><a id="__codelineno-0-1487" name="__codelineno-0-1487"></a>
+</span><span id="__linenumbers__-0-1488"><a id="__codelineno-0-1488" name="__codelineno-0-1488"></a>        <span class="c1"># Step 3: Encode baseline image</span>
+</span><span id="__linenumbers__-0-1489"><a id="__codelineno-0-1489" name="__codelineno-0-1489"></a>        <span class="n">primary_bytes_raw</span> <span class="o">=</span> <span class="n">_create_jpeg_bytes</span><span class="p">(</span>
+</span><span id="__linenumbers__-0-1490"><a id="__codelineno-0-1490" name="__codelineno-0-1490"></a>            <span class="n">data</span><span class="p">[</span><span class="s2">&quot;baseline&quot;</span><span class="p">],</span> <span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;baseline_icc&quot;</span><span class="p">),</span> <span class="n">baseline_quality</span>
+</span><span id="__linenumbers__-0-1491"><a id="__codelineno-0-1491" name="__codelineno-0-1491"></a>        <span class="p">)</span>
+</span><span id="__linenumbers__-0-1492"><a id="__codelineno-0-1492" name="__codelineno-0-1492"></a>
+</span><span id="__linenumbers__-0-1493"><a id="__codelineno-0-1493" name="__codelineno-0-1493"></a>        <span class="c1"># Step 3.1: Insert URN stub APP2 in primary stream for compatibility</span>
+</span><span id="__linenumbers__-0-1494"><a id="__codelineno-0-1494" name="__codelineno-0-1494"></a>        <span class="n">primary_stub_segment</span> <span class="o">=</span> <span class="n">_build_app2_segment</span><span class="p">(</span><span class="n">ISO21496_URN</span> <span class="o">+</span> <span class="sa">b</span><span class="s2">&quot;</span><span class="se">\x00\x00\x00\x00</span><span class="s2">&quot;</span><span class="p">)</span>
+</span><span id="__linenumbers__-0-1495"><a id="__codelineno-0-1495" name="__codelineno-0-1495"></a>
+</span><span id="__linenumbers__-0-1496"><a id="__codelineno-0-1496" name="__codelineno-0-1496"></a>        <span class="c1"># Step 4: Build MPF index segment (APP2)</span>
+</span><span id="__linenumbers__-0-1497"><a id="__codelineno-0-1497" name="__codelineno-0-1497"></a>        <span class="c1"># MPF points to gainmap at end of file</span>
+</span><span id="__linenumbers__-0-1498"><a id="__codelineno-0-1498" name="__codelineno-0-1498"></a>
+</span><span id="__linenumbers__-0-1499"><a id="__codelineno-0-1499" name="__codelineno-0-1499"></a>        <span class="c1"># Step 4.1: Generate MPF payload with placeholder offset for length calculation</span>
+</span><span id="__linenumbers__-0-1500"><a id="__codelineno-0-1500" name="__codelineno-0-1500"></a>        <span class="n">mpf_payload_temp</span> <span class="o">=</span> <span class="n">_build_mpf_payload</span><span class="p">(</span>
+</span><span id="__linenumbers__-0-1501"><a id="__codelineno-0-1501" name="__codelineno-0-1501"></a>            <span class="n">primary_size</span><span class="o">=</span><span class="nb">len</span><span class="p">(</span><span class="n">primary_bytes_raw</span><span class="p">),</span>
+</span><span id="__linenumbers__-0-1502"><a id="__codelineno-0-1502" name="__codelineno-0-1502"></a>            <span class="n">gainmap_size</span><span class="o">=</span><span class="nb">len</span><span class="p">(</span><span class="n">gainmap_final</span><span class="p">),</span>
+</span><span id="__linenumbers__-0-1503"><a id="__codelineno-0-1503" name="__codelineno-0-1503"></a>            <span class="n">gainmap_offset</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>  <span class="c1"># Placeholder</span>
+</span><span id="__linenumbers__-0-1504"><a id="__codelineno-0-1504" name="__codelineno-0-1504"></a>        <span class="p">)</span>
+</span><span id="__linenumbers__-0-1505"><a id="__codelineno-0-1505" name="__codelineno-0-1505"></a>        <span class="n">mpf_segment_temp</span> <span class="o">=</span> <span class="n">_build_app2_segment</span><span class="p">(</span><span class="n">mpf_payload_temp</span><span class="p">)</span>
+</span><span id="__linenumbers__-0-1506"><a id="__codelineno-0-1506" name="__codelineno-0-1506"></a>
+</span><span id="__linenumbers__-0-1507"><a id="__codelineno-0-1507" name="__codelineno-0-1507"></a>        <span class="c1"># Step 4.2: Calculate MPF-related file offsets</span>
+</span><span id="__linenumbers__-0-1508"><a id="__codelineno-0-1508" name="__codelineno-0-1508"></a>        <span class="n">_</span><span class="p">,</span> <span class="n">gainmap_relative_offset</span><span class="p">,</span> <span class="n">total_primary_len</span> <span class="o">=</span> <span class="n">_calculate_mpf_offsets</span><span class="p">(</span>
+</span><span id="__linenumbers__-0-1509"><a id="__codelineno-0-1509" name="__codelineno-0-1509"></a>            <span class="n">primary_bytes_raw</span><span class="p">,</span>
+</span><span id="__linenumbers__-0-1510"><a id="__codelineno-0-1510" name="__codelineno-0-1510"></a>            <span class="n">primary_stub_segment</span><span class="p">,</span>
+</span><span id="__linenumbers__-0-1511"><a id="__codelineno-0-1511" name="__codelineno-0-1511"></a>            <span class="n">mpf_segment_temp</span><span class="p">,</span>
+</span><span id="__linenumbers__-0-1512"><a id="__codelineno-0-1512" name="__codelineno-0-1512"></a>        <span class="p">)</span>
+</span><span id="__linenumbers__-0-1513"><a id="__codelineno-0-1513" name="__codelineno-0-1513"></a>
+</span><span id="__linenumbers__-0-1514"><a id="__codelineno-0-1514" name="__codelineno-0-1514"></a>        <span class="c1"># Step 4.3: Regenerate MPF with correct primary size and gainmap offset</span>
+</span><span id="__linenumbers__-0-1515"><a id="__codelineno-0-1515" name="__codelineno-0-1515"></a>        <span class="n">mpf_payload_final</span> <span class="o">=</span> <span class="n">_build_mpf_payload</span><span class="p">(</span>
+</span><span id="__linenumbers__-0-1516"><a id="__codelineno-0-1516" name="__codelineno-0-1516"></a>            <span class="n">primary_size</span><span class="o">=</span><span class="n">total_primary_len</span><span class="p">,</span>
+</span><span id="__linenumbers__-0-1517"><a id="__codelineno-0-1517" name="__codelineno-0-1517"></a>            <span class="n">gainmap_size</span><span class="o">=</span><span class="nb">len</span><span class="p">(</span><span class="n">gainmap_final</span><span class="p">),</span>
+</span><span id="__linenumbers__-0-1518"><a id="__codelineno-0-1518" name="__codelineno-0-1518"></a>            <span class="n">gainmap_offset</span><span class="o">=</span><span class="n">gainmap_relative_offset</span><span class="p">,</span>
+</span><span id="__linenumbers__-0-1519"><a id="__codelineno-0-1519" name="__codelineno-0-1519"></a>        <span class="p">)</span>
+</span><span id="__linenumbers__-0-1520"><a id="__codelineno-0-1520" name="__codelineno-0-1520"></a>        <span class="n">mpf_segment_final</span> <span class="o">=</span> <span class="n">_build_app2_segment</span><span class="p">(</span><span class="n">mpf_payload_final</span><span class="p">)</span>
+</span><span id="__linenumbers__-0-1521"><a id="__codelineno-0-1521" name="__codelineno-0-1521"></a>
+</span><span id="__linenumbers__-0-1522"><a id="__codelineno-0-1522" name="__codelineno-0-1522"></a>        <span class="c1"># Step 5: Assemble baseline stream with MPF</span>
+</span><span id="__linenumbers__-0-1523"><a id="__codelineno-0-1523" name="__codelineno-0-1523"></a>        <span class="n">primary_final</span> <span class="o">=</span> <span class="p">(</span>
+</span><span id="__linenumbers__-0-1524"><a id="__codelineno-0-1524" name="__codelineno-0-1524"></a>            <span class="n">primary_bytes_raw</span><span class="p">[:</span><span class="mi">2</span><span class="p">]</span>
+</span><span id="__linenumbers__-0-1525"><a id="__codelineno-0-1525" name="__codelineno-0-1525"></a>            <span class="o">+</span> <span class="n">primary_stub_segment</span>
+</span><span id="__linenumbers__-0-1526"><a id="__codelineno-0-1526" name="__codelineno-0-1526"></a>            <span class="o">+</span> <span class="n">mpf_segment_final</span>
+</span><span id="__linenumbers__-0-1527"><a id="__codelineno-0-1527" name="__codelineno-0-1527"></a>            <span class="o">+</span> <span class="n">primary_bytes_raw</span><span class="p">[</span><span class="mi">2</span><span class="p">:]</span>
+</span><span id="__linenumbers__-0-1528"><a id="__codelineno-0-1528" name="__codelineno-0-1528"></a>        <span class="p">)</span>
+</span><span id="__linenumbers__-0-1529"><a id="__codelineno-0-1529" name="__codelineno-0-1529"></a>
+</span><span id="__linenumbers__-0-1530"><a id="__codelineno-0-1530" name="__codelineno-0-1530"></a>        <span class="c1"># Step 6: Write file (baseline + gainmap)</span>
+</span><span id="__linenumbers__-0-1531"><a id="__codelineno-0-1531" name="__codelineno-0-1531"></a>        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">filepath</span><span class="p">,</span> <span class="s2">&quot;wb&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+</span><span id="__linenumbers__-0-1532"><a id="__codelineno-0-1532" name="__codelineno-0-1532"></a>            <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">primary_final</span><span class="p">)</span>
+</span><span id="__linenumbers__-0-1533"><a id="__codelineno-0-1533" name="__codelineno-0-1533"></a>            <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">gainmap_final</span><span class="p">)</span>
+</span><span id="__linenumbers__-0-1534"><a id="__codelineno-0-1534" name="__codelineno-0-1534"></a>
+</span><span id="__linenumbers__-0-1535"><a id="__codelineno-0-1535" name="__codelineno-0-1535"></a>    <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+</span><span id="__linenumbers__-0-1536"><a id="__codelineno-0-1536" name="__codelineno-0-1536"></a>        <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Failed to write ISO 21496-1 file: </span><span class="si">{</span><span class="n">filepath</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="nn">e</span>
 </span></code></pre></div></td></tr></table></div>
             </details>
     </div>
