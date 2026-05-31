@@ -13,7 +13,7 @@ See Also:
 
 from __future__ import annotations
 
-from typing import Optional
+from typing import Literal, Optional
 import warnings
 
 import cv2
@@ -25,6 +25,8 @@ with warnings.catch_warnings():
 
 from hdrconv.core import GainmapImage, GainmapMetadata, HDRImage
 from hdrconv.icc import linearize_array_with_icc, convert_array_with_icc_matrix
+
+GainmapResizeMethod = Literal["shepard", "lanczos4", "linear", "nearest"]
 
 
 def _as_triplet(values: object, field_name: str) -> np.ndarray:
@@ -57,7 +59,7 @@ def _normalize_sample_array(
     return np.clip(arr.astype(np.float32) / float(sample_max), 0.0, 1.0)
 
 
-def _resize_gainmap_array(gainmap: np.ndarray, size: tuple[int, int]) -> np.ndarray:
+def _prepare_gainmap_for_resize(gainmap: np.ndarray) -> np.ndarray:
     gainmap = np.asarray(gainmap, dtype=np.float32)
 
     if gainmap.ndim == 2:
@@ -66,6 +68,84 @@ def _resize_gainmap_array(gainmap: np.ndarray, size: tuple[int, int]) -> np.ndar
         raise ValueError(
             f"Invalid gainmap shape for resize: expected 2D or 3D array, got {gainmap.shape}."
         )
+
+    return gainmap
+
+
+def _resize_gainmap_shepard(gainmap: np.ndarray, size: tuple[int, int]) -> np.ndarray:
+    """Resize a gainmap using libultrahdr-style 4-neighbour Shepard IDW."""
+    gainmap = _prepare_gainmap_for_resize(gainmap)
+    src_h, src_w, channels = gainmap.shape
+    dst_w, dst_h = size
+
+    if dst_w <= 0 or dst_h <= 0:
+        raise ValueError(f"Invalid resize target size: {size}.")
+
+    scale_x = dst_w / src_w
+    scale_y = dst_h / src_h
+
+    x_map = np.arange(dst_w, dtype=np.float32) / np.float32(scale_x)
+    x_lower = np.floor(x_map).astype(np.intp)
+    x_upper = np.minimum(x_lower + 1, src_w - 1)
+    x_lower = np.minimum(x_lower, src_w - 1)
+
+    x_lower_f = x_lower.astype(np.float32)
+    x_upper_f = x_upper.astype(np.float32)
+    dx_lower = x_map - x_lower_f
+    dx_upper = x_map - x_upper_f
+
+    resized = np.empty((dst_h, dst_w, channels), dtype=np.float32)
+
+    for y in range(dst_h):
+        y_map = np.float32(y / scale_y)
+        y_lower = min(int(np.floor(y_map)), src_h - 1)
+        y_upper = min(y_lower + 1, src_h - 1)
+
+        dy_lower = y_map - np.float32(y_lower)
+        dy_upper = y_map - np.float32(y_upper)
+
+        d1 = np.hypot(dx_lower, dy_lower)
+        d2 = np.hypot(dx_lower, dy_upper)
+        d3 = np.hypot(dx_upper, dy_lower)
+        d4 = np.hypot(dx_upper, dy_upper)
+
+        w1 = np.divide(1.0, d1, out=np.zeros_like(d1), where=d1 != 0.0)
+        w2 = np.divide(1.0, d2, out=np.zeros_like(d2), where=d2 != 0.0)
+        w3 = np.divide(1.0, d3, out=np.zeros_like(d3), where=d3 != 0.0)
+        w4 = np.divide(1.0, d4, out=np.zeros_like(d4), where=d4 != 0.0)
+        total = w1 + w2 + w3 + w4
+        exact_any = (d1 == 0.0) | (d2 == 0.0) | (d3 == 0.0) | (d4 == 0.0)
+        total = np.where(exact_any, 1.0, total)
+
+        row = (
+            gainmap[y_lower, x_lower] * w1[:, np.newaxis]
+            + gainmap[y_upper, x_lower] * w2[:, np.newaxis]
+            + gainmap[y_lower, x_upper] * w3[:, np.newaxis]
+            + gainmap[y_upper, x_upper] * w4[:, np.newaxis]
+        ) / total[:, np.newaxis]
+
+        exact = d1 == 0.0
+        if np.any(exact):
+            row[exact] = gainmap[y_lower, x_lower[exact]]
+        exact = d2 == 0.0
+        if np.any(exact):
+            row[exact] = gainmap[y_upper, x_lower[exact]]
+        exact = d3 == 0.0
+        if np.any(exact):
+            row[exact] = gainmap[y_lower, x_upper[exact]]
+        exact = d4 == 0.0
+        if np.any(exact):
+            row[exact] = gainmap[y_upper, x_upper[exact]]
+
+        resized[y] = row
+
+    return resized
+
+
+def _resize_gainmap_cv2(
+    gainmap: np.ndarray, size: tuple[int, int], interpolation: int
+) -> np.ndarray:
+    gainmap = _prepare_gainmap_for_resize(gainmap)
 
     # Anti-aliasing prefilter from next-work/imresize_aa.py, intentionally disabled for now.
     # h, w = gainmap.shape[:2]
@@ -79,15 +159,36 @@ def _resize_gainmap_array(gainmap: np.ndarray, size: tuple[int, int]) -> np.ndar
     #         ksize += 1
     #     gainmap = cv2.GaussianBlur(gainmap, (ksize, ksize), sigmaX=sigma)
 
-    resized = cv2.resize(gainmap, dsize=size, interpolation=cv2.INTER_LANCZOS4)
+    resized = cv2.resize(gainmap, dsize=size, interpolation=interpolation)
     if resized.ndim == 2:
         resized = resized[:, :, np.newaxis]
 
     return resized.astype(np.float32, copy=False)
 
 
+def _resize_gainmap_array(
+    gainmap: np.ndarray,
+    size: tuple[int, int],
+    method: GainmapResizeMethod = "shepard",
+) -> np.ndarray:
+    if method == "shepard":
+        return _resize_gainmap_shepard(gainmap, size)
+    if method == "lanczos4":
+        return _resize_gainmap_cv2(gainmap, size, cv2.INTER_LANCZOS4)
+    if method == "linear":
+        return _resize_gainmap_cv2(gainmap, size, cv2.INTER_LINEAR)
+    if method == "nearest":
+        return _resize_gainmap_cv2(gainmap, size, cv2.INTER_NEAREST)
+
+    raise ValueError(
+        "Invalid gainmap resize method: "
+        f"{method!r}. Expected one of 'shepard', 'lanczos4', 'linear', or 'nearest'."
+    )
+
+
 def gainmap_to_hdr(
     data: GainmapImage,
+    gainmap_resize_method: GainmapResizeMethod = "shepard",
 ) -> HDRImage:
     """Convert ISO 21496-1 Gainmap to linear HDR image.
 
@@ -100,6 +201,8 @@ def gainmap_to_hdr(
 
     Args:
         data: GainmapImage dict containing baseline, gainmap, and metadata.
+        gainmap_resize_method: Method used when gainmap and baseline dimensions differ.
+            ``"shepard"`` matches libultrahdr's 4-neighbour inverse-distance weighting.
     Returns:
         HDRImage dict with the following keys:
         - ``data`` (np.ndarray): Linear HDR array, float32, shape (H, W, 3).
@@ -131,7 +234,7 @@ def gainmap_to_hdr(
     # Resize gainmap to match baseline if needed
     h, w = baseline.shape[:2]
     if gainmap.shape[:2] != (h, w):
-        gainmap = _resize_gainmap_array(gainmap, (w, h))
+        gainmap = _resize_gainmap_array(gainmap, (w, h), gainmap_resize_method)
 
     # Ensure gainmap is 3-channel for calculations
     if gainmap.ndim == 2:
