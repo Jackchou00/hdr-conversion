@@ -787,14 +787,14 @@
     <div class="doc doc-contents first">
 
         <p>HDR conversion algorithms.</p>
-<p>This module provides functions for converting between HDR formats and applying
-color space and transfer function transformations:</p>
+<p>This module provides functions for converting between HDR formats:</p>
 <ul>
 <li>Gainmap conversion: <code>gainmap_to_hdr</code>, <code>hdr_to_gainmap</code></li>
 <li>Apple HEIC conversion: <code>apple_heic_to_hdr</code></li>
-<li>Color space conversion: <code>convert_color_space</code></li>
-<li>Transfer functions: <code>apply_pq</code>, <code>inverse_pq</code></li>
 </ul>
+<p>Transfer function encoding/decoding (e.g. PQ) is handled with the <code>colour</code>
+package, e.g. <code>colour.eotf(data, 'ITU-R BT.2100 PQ')</code> and
+<code>colour.eotf_inverse(data, 'ITU-R BT.2100 PQ')</code> as shown in <code>examples/</code>.</p>
 
 
 
@@ -934,7 +934,7 @@ from the SDR base and single-channel gain map.</p>
             <td>
               <div class="doc-md-description">
                 <ul>
-<li><code>icc_profile</code> (bytes | None): None.</li>
+<li><code>icc_profile</code> (bytes | None): Source base-image ICC profile.</li>
 </ul>
               </div>
             </td>
@@ -1040,7 +1040,10 @@ linearized before applying the formula.</p>
 <span class="normal"><a href="#__codelineno-0-103">103</a></span>
 <span class="normal"><a href="#__codelineno-0-104">104</a></span>
 <span class="normal"><a href="#__codelineno-0-105">105</a></span>
-<span class="normal"><a href="#__codelineno-0-106">106</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__linenumbers__-0-25"><a id="__codelineno-0-25" name="__codelineno-0-25"></a><span class="k">def</span><span class="w"> </span><span class="nf">apple_heic_to_hdr</span><span class="p">(</span><span class="n">data</span><span class="p">:</span> <span class="n">AppleHeicData</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">HDRImage</span><span class="p">:</span>
+<span class="normal"><a href="#__codelineno-0-106">106</a></span>
+<span class="normal"><a href="#__codelineno-0-107">107</a></span>
+<span class="normal"><a href="#__codelineno-0-108">108</a></span>
+<span class="normal"><a href="#__codelineno-0-109">109</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__linenumbers__-0-25"><a id="__codelineno-0-25" name="__codelineno-0-25"></a><span class="k">def</span><span class="w"> </span><span class="nf">apple_heic_to_hdr</span><span class="p">(</span><span class="n">data</span><span class="p">:</span> <span class="n">AppleHeicData</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">HDRImage</span><span class="p">:</span>
 </span><span id="__linenumbers__-0-26"><a id="__codelineno-0-26" name="__codelineno-0-26"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Convert Apple HEIC gain map data to linear HDR.</span>
 </span><span id="__linenumbers__-0-27"><a id="__codelineno-0-27" name="__codelineno-0-27"></a>
 </span><span id="__linenumbers__-0-28"><a id="__codelineno-0-28" name="__codelineno-0-28"></a><span class="sd">    Applies Apple&#39;s proprietary gain map formula to reconstruct the HDR image</span>
@@ -1062,7 +1065,7 @@ linearized before applying the formula.</p>
 </span><span id="__linenumbers__-0-44"><a id="__codelineno-0-44" name="__codelineno-0-44"></a><span class="sd">        - ``data`` (np.ndarray): Linear HDR array, float32, shape (H, W, 3).</span>
 </span><span id="__linenumbers__-0-45"><a id="__codelineno-0-45" name="__codelineno-0-45"></a><span class="sd">        - ``color_space`` (str): &#39;p3&#39; (Display P3, Apple&#39;s default).</span>
 </span><span id="__linenumbers__-0-46"><a id="__codelineno-0-46" name="__codelineno-0-46"></a><span class="sd">        - ``transfer_function`` (str): &#39;linear&#39;.</span>
-</span><span id="__linenumbers__-0-47"><a id="__codelineno-0-47" name="__codelineno-0-47"></a><span class="sd">        - ``icc_profile`` (bytes | None): None.</span>
+</span><span id="__linenumbers__-0-47"><a id="__codelineno-0-47" name="__codelineno-0-47"></a><span class="sd">        - ``icc_profile`` (bytes | None): Source base-image ICC profile.</span>
 </span><span id="__linenumbers__-0-48"><a id="__codelineno-0-48" name="__codelineno-0-48"></a>
 </span><span id="__linenumbers__-0-49"><a id="__codelineno-0-49" name="__codelineno-0-49"></a><span class="sd">    Note:</span>
 </span><span id="__linenumbers__-0-50"><a id="__codelineno-0-50" name="__codelineno-0-50"></a><span class="sd">        The gain map is upscaled from 1/4 resolution using bilinear interpolation.</span>
@@ -1079,49 +1082,52 @@ linearized before applying the formula.</p>
 </span><span id="__linenumbers__-0-61"><a id="__codelineno-0-61" name="__codelineno-0-61"></a>        <span class="k">if</span> <span class="n">base_image</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">gain_map</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
 </span><span id="__linenumbers__-0-62"><a id="__codelineno-0-62" name="__codelineno-0-62"></a>            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Both base_image and gain_map must be provided.&quot;</span><span class="p">)</span>
 </span><span id="__linenumbers__-0-63"><a id="__codelineno-0-63" name="__codelineno-0-63"></a>
-</span><span id="__linenumbers__-0-64"><a id="__codelineno-0-64" name="__codelineno-0-64"></a>        <span class="n">gain_map_resized</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span>
-</span><span id="__linenumbers__-0-65"><a id="__codelineno-0-65" name="__codelineno-0-65"></a>            <span class="n">Image</span><span class="o">.</span><span class="n">fromarray</span><span class="p">(</span><span class="n">gain_map</span><span class="p">)</span><span class="o">.</span><span class="n">resize</span><span class="p">(</span>
-</span><span id="__linenumbers__-0-66"><a id="__codelineno-0-66" name="__codelineno-0-66"></a>                <span class="p">(</span><span class="n">base_image</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">base_image</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]),</span> <span class="n">Image</span><span class="o">.</span><span class="n">BICUBIC</span>
-</span><span id="__linenumbers__-0-67"><a id="__codelineno-0-67" name="__codelineno-0-67"></a>            <span class="p">)</span>
-</span><span id="__linenumbers__-0-68"><a id="__codelineno-0-68" name="__codelineno-0-68"></a>        <span class="p">)</span>
-</span><span id="__linenumbers__-0-69"><a id="__codelineno-0-69" name="__codelineno-0-69"></a>
-</span><span id="__linenumbers__-0-70"><a id="__codelineno-0-70" name="__codelineno-0-70"></a>        <span class="n">gain_map_norm</span> <span class="o">=</span> <span class="n">gain_map_resized</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span> <span class="o">/</span> <span class="mf">255.0</span>
-</span><span id="__linenumbers__-0-71"><a id="__codelineno-0-71" name="__codelineno-0-71"></a>
-</span><span id="__linenumbers__-0-72"><a id="__codelineno-0-72" name="__codelineno-0-72"></a>        <span class="k">def</span><span class="w"> </span><span class="nf">rec709_to_linear</span><span class="p">(</span><span class="n">gain_map_channel</span><span class="p">):</span>
-</span><span id="__linenumbers__-0-73"><a id="__codelineno-0-73" name="__codelineno-0-73"></a>            <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span>
-</span><span id="__linenumbers__-0-74"><a id="__codelineno-0-74" name="__codelineno-0-74"></a>                <span class="n">gain_map_channel</span> <span class="o">&lt;=</span> <span class="mf">0.08145</span><span class="p">,</span>
-</span><span id="__linenumbers__-0-75"><a id="__codelineno-0-75" name="__codelineno-0-75"></a>                <span class="n">gain_map_channel</span> <span class="o">/</span> <span class="mf">4.5</span><span class="p">,</span>
-</span><span id="__linenumbers__-0-76"><a id="__codelineno-0-76" name="__codelineno-0-76"></a>                <span class="n">np</span><span class="o">.</span><span class="n">power</span><span class="p">((</span><span class="n">gain_map_channel</span> <span class="o">+</span> <span class="mf">0.099</span><span class="p">)</span> <span class="o">/</span> <span class="mf">1.099</span><span class="p">,</span> <span class="mi">1</span> <span class="o">/</span> <span class="mf">0.45</span><span class="p">),</span>
-</span><span id="__linenumbers__-0-77"><a id="__codelineno-0-77" name="__codelineno-0-77"></a>            <span class="p">)</span>
-</span><span id="__linenumbers__-0-78"><a id="__codelineno-0-78" name="__codelineno-0-78"></a>
-</span><span id="__linenumbers__-0-79"><a id="__codelineno-0-79" name="__codelineno-0-79"></a>        <span class="k">def</span><span class="w"> </span><span class="nf">srgb_to_linear</span><span class="p">(</span><span class="n">base_image_channel</span><span class="p">):</span>
-</span><span id="__linenumbers__-0-80"><a id="__codelineno-0-80" name="__codelineno-0-80"></a>            <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span>
-</span><span id="__linenumbers__-0-81"><a id="__codelineno-0-81" name="__codelineno-0-81"></a>                <span class="n">base_image_channel</span> <span class="o">&lt;=</span> <span class="mf">0.04</span><span class="p">,</span>
-</span><span id="__linenumbers__-0-82"><a id="__codelineno-0-82" name="__codelineno-0-82"></a>                <span class="n">base_image_channel</span> <span class="o">*</span> <span class="mf">0.077</span><span class="p">,</span>
-</span><span id="__linenumbers__-0-83"><a id="__codelineno-0-83" name="__codelineno-0-83"></a>                <span class="n">np</span><span class="o">.</span><span class="n">power</span><span class="p">((</span><span class="n">base_image_channel</span> <span class="o">+</span> <span class="mf">0.052</span><span class="p">)</span> <span class="o">*</span> <span class="mf">0.948</span><span class="p">,</span> <span class="mf">2.4</span><span class="p">),</span>
-</span><span id="__linenumbers__-0-84"><a id="__codelineno-0-84" name="__codelineno-0-84"></a>            <span class="p">)</span>
-</span><span id="__linenumbers__-0-85"><a id="__codelineno-0-85" name="__codelineno-0-85"></a>
-</span><span id="__linenumbers__-0-86"><a id="__codelineno-0-86" name="__codelineno-0-86"></a>        <span class="n">gain_map_linear</span> <span class="o">=</span> <span class="n">rec709_to_linear</span><span class="p">(</span><span class="n">gain_map_norm</span><span class="p">)</span>
-</span><span id="__linenumbers__-0-87"><a id="__codelineno-0-87" name="__codelineno-0-87"></a>        <span class="c1"># gain_map_linear = np.clip(gain_map_linear, 0.0, 1.0)</span>
+</span><span id="__linenumbers__-0-64"><a id="__codelineno-0-64" name="__codelineno-0-64"></a>        <span class="k">if</span> <span class="n">gain_map</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">3</span> <span class="ow">and</span> <span class="n">gain_map</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+</span><span id="__linenumbers__-0-65"><a id="__codelineno-0-65" name="__codelineno-0-65"></a>            <span class="n">gain_map</span> <span class="o">=</span> <span class="n">gain_map</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span>
+</span><span id="__linenumbers__-0-66"><a id="__codelineno-0-66" name="__codelineno-0-66"></a>
+</span><span id="__linenumbers__-0-67"><a id="__codelineno-0-67" name="__codelineno-0-67"></a>        <span class="n">gain_map_resized</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span>
+</span><span id="__linenumbers__-0-68"><a id="__codelineno-0-68" name="__codelineno-0-68"></a>            <span class="n">Image</span><span class="o">.</span><span class="n">fromarray</span><span class="p">(</span><span class="n">gain_map</span><span class="p">)</span><span class="o">.</span><span class="n">resize</span><span class="p">(</span>
+</span><span id="__linenumbers__-0-69"><a id="__codelineno-0-69" name="__codelineno-0-69"></a>                <span class="p">(</span><span class="n">base_image</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">base_image</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]),</span> <span class="n">Image</span><span class="o">.</span><span class="n">BICUBIC</span>
+</span><span id="__linenumbers__-0-70"><a id="__codelineno-0-70" name="__codelineno-0-70"></a>            <span class="p">)</span>
+</span><span id="__linenumbers__-0-71"><a id="__codelineno-0-71" name="__codelineno-0-71"></a>        <span class="p">)</span>
+</span><span id="__linenumbers__-0-72"><a id="__codelineno-0-72" name="__codelineno-0-72"></a>
+</span><span id="__linenumbers__-0-73"><a id="__codelineno-0-73" name="__codelineno-0-73"></a>        <span class="n">gain_map_norm</span> <span class="o">=</span> <span class="n">gain_map_resized</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span> <span class="o">/</span> <span class="mf">255.0</span>
+</span><span id="__linenumbers__-0-74"><a id="__codelineno-0-74" name="__codelineno-0-74"></a>
+</span><span id="__linenumbers__-0-75"><a id="__codelineno-0-75" name="__codelineno-0-75"></a>        <span class="k">def</span><span class="w"> </span><span class="nf">rec709_to_linear</span><span class="p">(</span><span class="n">gain_map_channel</span><span class="p">):</span>
+</span><span id="__linenumbers__-0-76"><a id="__codelineno-0-76" name="__codelineno-0-76"></a>            <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span>
+</span><span id="__linenumbers__-0-77"><a id="__codelineno-0-77" name="__codelineno-0-77"></a>                <span class="n">gain_map_channel</span> <span class="o">&lt;=</span> <span class="mf">0.08145</span><span class="p">,</span>
+</span><span id="__linenumbers__-0-78"><a id="__codelineno-0-78" name="__codelineno-0-78"></a>                <span class="n">gain_map_channel</span> <span class="o">/</span> <span class="mf">4.5</span><span class="p">,</span>
+</span><span id="__linenumbers__-0-79"><a id="__codelineno-0-79" name="__codelineno-0-79"></a>                <span class="n">np</span><span class="o">.</span><span class="n">power</span><span class="p">((</span><span class="n">gain_map_channel</span> <span class="o">+</span> <span class="mf">0.099</span><span class="p">)</span> <span class="o">/</span> <span class="mf">1.099</span><span class="p">,</span> <span class="mi">1</span> <span class="o">/</span> <span class="mf">0.45</span><span class="p">),</span>
+</span><span id="__linenumbers__-0-80"><a id="__codelineno-0-80" name="__codelineno-0-80"></a>            <span class="p">)</span>
+</span><span id="__linenumbers__-0-81"><a id="__codelineno-0-81" name="__codelineno-0-81"></a>
+</span><span id="__linenumbers__-0-82"><a id="__codelineno-0-82" name="__codelineno-0-82"></a>        <span class="k">def</span><span class="w"> </span><span class="nf">srgb_to_linear</span><span class="p">(</span><span class="n">base_image_channel</span><span class="p">):</span>
+</span><span id="__linenumbers__-0-83"><a id="__codelineno-0-83" name="__codelineno-0-83"></a>            <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span>
+</span><span id="__linenumbers__-0-84"><a id="__codelineno-0-84" name="__codelineno-0-84"></a>                <span class="n">base_image_channel</span> <span class="o">&lt;=</span> <span class="mf">0.04045</span><span class="p">,</span>
+</span><span id="__linenumbers__-0-85"><a id="__codelineno-0-85" name="__codelineno-0-85"></a>                <span class="n">base_image_channel</span> <span class="o">/</span> <span class="mf">12.92</span><span class="p">,</span>
+</span><span id="__linenumbers__-0-86"><a id="__codelineno-0-86" name="__codelineno-0-86"></a>                <span class="n">np</span><span class="o">.</span><span class="n">power</span><span class="p">((</span><span class="n">base_image_channel</span> <span class="o">+</span> <span class="mf">0.055</span><span class="p">)</span> <span class="o">/</span> <span class="mf">1.055</span><span class="p">,</span> <span class="mf">2.4</span><span class="p">),</span>
+</span><span id="__linenumbers__-0-87"><a id="__codelineno-0-87" name="__codelineno-0-87"></a>            <span class="p">)</span>
 </span><span id="__linenumbers__-0-88"><a id="__codelineno-0-88" name="__codelineno-0-88"></a>
-</span><span id="__linenumbers__-0-89"><a id="__codelineno-0-89" name="__codelineno-0-89"></a>        <span class="n">base_image_norm</span> <span class="o">=</span> <span class="n">base_image</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span> <span class="o">/</span> <span class="mf">255.0</span>
-</span><span id="__linenumbers__-0-90"><a id="__codelineno-0-90" name="__codelineno-0-90"></a>        <span class="n">base_image_linear</span> <span class="o">=</span> <span class="n">srgb_to_linear</span><span class="p">(</span><span class="n">base_image_norm</span><span class="p">)</span>
-</span><span id="__linenumbers__-0-91"><a id="__codelineno-0-91" name="__codelineno-0-91"></a>        <span class="c1"># base_image_linear = np.clip(base_image_linear, 0.0, 1.0)</span>
-</span><span id="__linenumbers__-0-92"><a id="__codelineno-0-92" name="__codelineno-0-92"></a>
-</span><span id="__linenumbers__-0-93"><a id="__codelineno-0-93" name="__codelineno-0-93"></a>        <span class="n">hdr_image_linear</span> <span class="o">=</span> <span class="n">base_image_linear</span> <span class="o">*</span> <span class="p">(</span>
-</span><span id="__linenumbers__-0-94"><a id="__codelineno-0-94" name="__codelineno-0-94"></a>            <span class="mf">1.0</span> <span class="o">+</span> <span class="p">(</span><span class="n">headroom</span> <span class="o">-</span> <span class="mf">1.0</span><span class="p">)</span> <span class="o">*</span> <span class="n">gain_map_linear</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">]</span>
-</span><span id="__linenumbers__-0-95"><a id="__codelineno-0-95" name="__codelineno-0-95"></a>        <span class="p">)</span>
-</span><span id="__linenumbers__-0-96"><a id="__codelineno-0-96" name="__codelineno-0-96"></a>        <span class="c1"># hdr_image_linear = np.clip(hdr_image_linear, 0.0, None)</span>
-</span><span id="__linenumbers__-0-97"><a id="__codelineno-0-97" name="__codelineno-0-97"></a>        <span class="k">return</span> <span class="n">hdr_image_linear</span>
-</span><span id="__linenumbers__-0-98"><a id="__codelineno-0-98" name="__codelineno-0-98"></a>
-</span><span id="__linenumbers__-0-99"><a id="__codelineno-0-99" name="__codelineno-0-99"></a>    <span class="n">hdr_linear</span> <span class="o">=</span> <span class="n">apply_gain_map</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s2">&quot;base&quot;</span><span class="p">],</span> <span class="n">data</span><span class="p">[</span><span class="s2">&quot;gainmap&quot;</span><span class="p">],</span> <span class="n">data</span><span class="p">[</span><span class="s2">&quot;headroom&quot;</span><span class="p">])</span>
-</span><span id="__linenumbers__-0-100"><a id="__codelineno-0-100" name="__codelineno-0-100"></a>
-</span><span id="__linenumbers__-0-101"><a id="__codelineno-0-101" name="__codelineno-0-101"></a>    <span class="k">return</span> <span class="n">HDRImage</span><span class="p">(</span>
-</span><span id="__linenumbers__-0-102"><a id="__codelineno-0-102" name="__codelineno-0-102"></a>        <span class="n">data</span><span class="o">=</span><span class="n">hdr_linear</span><span class="p">,</span>
-</span><span id="__linenumbers__-0-103"><a id="__codelineno-0-103" name="__codelineno-0-103"></a>        <span class="n">color_space</span><span class="o">=</span><span class="s2">&quot;p3&quot;</span><span class="p">,</span>  <span class="c1"># Apple uses Display P3</span>
-</span><span id="__linenumbers__-0-104"><a id="__codelineno-0-104" name="__codelineno-0-104"></a>        <span class="n">transfer_function</span><span class="o">=</span><span class="s2">&quot;linear&quot;</span><span class="p">,</span>
-</span><span id="__linenumbers__-0-105"><a id="__codelineno-0-105" name="__codelineno-0-105"></a>        <span class="n">icc_profile</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
-</span><span id="__linenumbers__-0-106"><a id="__codelineno-0-106" name="__codelineno-0-106"></a>    <span class="p">)</span>
+</span><span id="__linenumbers__-0-89"><a id="__codelineno-0-89" name="__codelineno-0-89"></a>        <span class="n">gain_map_linear</span> <span class="o">=</span> <span class="n">rec709_to_linear</span><span class="p">(</span><span class="n">gain_map_norm</span><span class="p">)</span>
+</span><span id="__linenumbers__-0-90"><a id="__codelineno-0-90" name="__codelineno-0-90"></a>        <span class="c1"># gain_map_linear = np.clip(gain_map_linear, 0.0, 1.0)</span>
+</span><span id="__linenumbers__-0-91"><a id="__codelineno-0-91" name="__codelineno-0-91"></a>
+</span><span id="__linenumbers__-0-92"><a id="__codelineno-0-92" name="__codelineno-0-92"></a>        <span class="n">base_image_norm</span> <span class="o">=</span> <span class="n">base_image</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span> <span class="o">/</span> <span class="mf">255.0</span>
+</span><span id="__linenumbers__-0-93"><a id="__codelineno-0-93" name="__codelineno-0-93"></a>        <span class="n">base_image_linear</span> <span class="o">=</span> <span class="n">srgb_to_linear</span><span class="p">(</span><span class="n">base_image_norm</span><span class="p">)</span>
+</span><span id="__linenumbers__-0-94"><a id="__codelineno-0-94" name="__codelineno-0-94"></a>        <span class="c1"># base_image_linear = np.clip(base_image_linear, 0.0, 1.0)</span>
+</span><span id="__linenumbers__-0-95"><a id="__codelineno-0-95" name="__codelineno-0-95"></a>
+</span><span id="__linenumbers__-0-96"><a id="__codelineno-0-96" name="__codelineno-0-96"></a>        <span class="n">hdr_image_linear</span> <span class="o">=</span> <span class="n">base_image_linear</span> <span class="o">*</span> <span class="p">(</span>
+</span><span id="__linenumbers__-0-97"><a id="__codelineno-0-97" name="__codelineno-0-97"></a>            <span class="mf">1.0</span> <span class="o">+</span> <span class="p">(</span><span class="n">headroom</span> <span class="o">-</span> <span class="mf">1.0</span><span class="p">)</span> <span class="o">*</span> <span class="n">gain_map_linear</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">]</span>
+</span><span id="__linenumbers__-0-98"><a id="__codelineno-0-98" name="__codelineno-0-98"></a>        <span class="p">)</span>
+</span><span id="__linenumbers__-0-99"><a id="__codelineno-0-99" name="__codelineno-0-99"></a>        <span class="c1"># hdr_image_linear = np.clip(hdr_image_linear, 0.0, None)</span>
+</span><span id="__linenumbers__-0-100"><a id="__codelineno-0-100" name="__codelineno-0-100"></a>        <span class="k">return</span> <span class="n">hdr_image_linear</span>
+</span><span id="__linenumbers__-0-101"><a id="__codelineno-0-101" name="__codelineno-0-101"></a>
+</span><span id="__linenumbers__-0-102"><a id="__codelineno-0-102" name="__codelineno-0-102"></a>    <span class="n">hdr_linear</span> <span class="o">=</span> <span class="n">apply_gain_map</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s2">&quot;base&quot;</span><span class="p">],</span> <span class="n">data</span><span class="p">[</span><span class="s2">&quot;gainmap&quot;</span><span class="p">],</span> <span class="n">data</span><span class="p">[</span><span class="s2">&quot;headroom&quot;</span><span class="p">])</span>
+</span><span id="__linenumbers__-0-103"><a id="__codelineno-0-103" name="__codelineno-0-103"></a>
+</span><span id="__linenumbers__-0-104"><a id="__codelineno-0-104" name="__codelineno-0-104"></a>    <span class="k">return</span> <span class="n">HDRImage</span><span class="p">(</span>
+</span><span id="__linenumbers__-0-105"><a id="__codelineno-0-105" name="__codelineno-0-105"></a>        <span class="n">data</span><span class="o">=</span><span class="n">hdr_linear</span><span class="p">,</span>
+</span><span id="__linenumbers__-0-106"><a id="__codelineno-0-106" name="__codelineno-0-106"></a>        <span class="n">color_space</span><span class="o">=</span><span class="s2">&quot;p3&quot;</span><span class="p">,</span>  <span class="c1"># Apple uses Display P3</span>
+</span><span id="__linenumbers__-0-107"><a id="__codelineno-0-107" name="__codelineno-0-107"></a>        <span class="n">transfer_function</span><span class="o">=</span><span class="s2">&quot;linear&quot;</span><span class="p">,</span>
+</span><span id="__linenumbers__-0-108"><a id="__codelineno-0-108" name="__codelineno-0-108"></a>        <span class="n">icc_profile</span><span class="o">=</span><span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;icc_profile&quot;</span><span class="p">),</span>
+</span><span id="__linenumbers__-0-109"><a id="__codelineno-0-109" name="__codelineno-0-109"></a>    <span class="p">)</span>
 </span></code></pre></div></td></tr></table></div>
             </details>
     </div>
@@ -1198,7 +1204,12 @@ linearized before applying the formula.</p>
         <p>Returns:
     HDRImage dict with the following keys:
     - <code>data</code> (np.ndarray): Linear HDR array, float32, shape (H, W, 3).
-    - <code>transfer_function</code> (str): Always 'linear'.</p>
+    - <code>transfer_function</code> (str): Always 'linear'.
+    - <code>icc_profile</code> (bytes | None): ICC profile describing the working
+      color space of the reconstruction: <code>baseline_icc</code> when
+      <code>use_base_colour_space</code> is True, otherwise <code>gainmap_icc</code> when the
+      baseline was converted to the alternate space (falling back to
+      <code>baseline_icc</code> if the conversion was skipped or failed).</p>
 
 
 <details class="see-also" open>
@@ -1210,27 +1221,7 @@ linearized before applying the formula.</p>
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/hdrconv/convert/gainmap.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-189">189</a></span>
-<span class="normal"><a href="#__codelineno-0-190">190</a></span>
-<span class="normal"><a href="#__codelineno-0-191">191</a></span>
-<span class="normal"><a href="#__codelineno-0-192">192</a></span>
-<span class="normal"><a href="#__codelineno-0-193">193</a></span>
-<span class="normal"><a href="#__codelineno-0-194">194</a></span>
-<span class="normal"><a href="#__codelineno-0-195">195</a></span>
-<span class="normal"><a href="#__codelineno-0-196">196</a></span>
-<span class="normal"><a href="#__codelineno-0-197">197</a></span>
-<span class="normal"><a href="#__codelineno-0-198">198</a></span>
-<span class="normal"><a href="#__codelineno-0-199">199</a></span>
-<span class="normal"><a href="#__codelineno-0-200">200</a></span>
-<span class="normal"><a href="#__codelineno-0-201">201</a></span>
-<span class="normal"><a href="#__codelineno-0-202">202</a></span>
-<span class="normal"><a href="#__codelineno-0-203">203</a></span>
-<span class="normal"><a href="#__codelineno-0-204">204</a></span>
-<span class="normal"><a href="#__codelineno-0-205">205</a></span>
-<span class="normal"><a href="#__codelineno-0-206">206</a></span>
-<span class="normal"><a href="#__codelineno-0-207">207</a></span>
-<span class="normal"><a href="#__codelineno-0-208">208</a></span>
-<span class="normal"><a href="#__codelineno-0-209">209</a></span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-209">209</a></span>
 <span class="normal"><a href="#__codelineno-0-210">210</a></span>
 <span class="normal"><a href="#__codelineno-0-211">211</a></span>
 <span class="normal"><a href="#__codelineno-0-212">212</a></span>
@@ -1307,104 +1298,154 @@ linearized before applying the formula.</p>
 <span class="normal"><a href="#__codelineno-0-283">283</a></span>
 <span class="normal"><a href="#__codelineno-0-284">284</a></span>
 <span class="normal"><a href="#__codelineno-0-285">285</a></span>
-<span class="normal"><a href="#__codelineno-0-286">286</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__linenumbers__-0-189"><a id="__codelineno-0-189" name="__codelineno-0-189"></a><span class="k">def</span><span class="w"> </span><span class="nf">gainmap_to_hdr</span><span class="p">(</span>
-</span><span id="__linenumbers__-0-190"><a id="__codelineno-0-190" name="__codelineno-0-190"></a>    <span class="n">data</span><span class="p">:</span> <span class="n">GainmapImage</span><span class="p">,</span>
-</span><span id="__linenumbers__-0-191"><a id="__codelineno-0-191" name="__codelineno-0-191"></a>    <span class="n">gainmap_resize_method</span><span class="p">:</span> <span class="n">GainmapResizeMethod</span> <span class="o">=</span> <span class="s2">&quot;shepard&quot;</span><span class="p">,</span>
-</span><span id="__linenumbers__-0-192"><a id="__codelineno-0-192" name="__codelineno-0-192"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">HDRImage</span><span class="p">:</span>
-</span><span id="__linenumbers__-0-193"><a id="__codelineno-0-193" name="__codelineno-0-193"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Convert ISO 21496-1 Gainmap to linear HDR image.</span>
-</span><span id="__linenumbers__-0-194"><a id="__codelineno-0-194" name="__codelineno-0-194"></a>
-</span><span id="__linenumbers__-0-195"><a id="__codelineno-0-195" name="__codelineno-0-195"></a><span class="sd">    Applies the gainmap to the baseline image to reconstruct the alternate</span>
-</span><span id="__linenumbers__-0-196"><a id="__codelineno-0-196" name="__codelineno-0-196"></a><span class="sd">    (HDR) representation using the ISO 21496-1 formula:</span>
-</span><span id="__linenumbers__-0-197"><a id="__codelineno-0-197" name="__codelineno-0-197"></a>
-</span><span id="__linenumbers__-0-198"><a id="__codelineno-0-198" name="__codelineno-0-198"></a><span class="sd">    - G&#39; = (G^(1/gamma)) * (max - min) + min</span>
-</span><span id="__linenumbers__-0-199"><a id="__codelineno-0-199" name="__codelineno-0-199"></a><span class="sd">    - L = 2^G&#39;</span>
-</span><span id="__linenumbers__-0-200"><a id="__codelineno-0-200" name="__codelineno-0-200"></a><span class="sd">    - HDR = L * (baseline + baseline_offset) - alternate_offset</span>
-</span><span id="__linenumbers__-0-201"><a id="__codelineno-0-201" name="__codelineno-0-201"></a>
-</span><span id="__linenumbers__-0-202"><a id="__codelineno-0-202" name="__codelineno-0-202"></a><span class="sd">    Args:</span>
-</span><span id="__linenumbers__-0-203"><a id="__codelineno-0-203" name="__codelineno-0-203"></a><span class="sd">        data: GainmapImage dict containing baseline, gainmap, and metadata.</span>
-</span><span id="__linenumbers__-0-204"><a id="__codelineno-0-204" name="__codelineno-0-204"></a><span class="sd">        gainmap_resize_method: Method used when gainmap and baseline dimensions differ.</span>
-</span><span id="__linenumbers__-0-205"><a id="__codelineno-0-205" name="__codelineno-0-205"></a><span class="sd">            ``&quot;shepard&quot;`` matches libultrahdr&#39;s 4-neighbour inverse-distance weighting.</span>
-</span><span id="__linenumbers__-0-206"><a id="__codelineno-0-206" name="__codelineno-0-206"></a><span class="sd">    Returns:</span>
-</span><span id="__linenumbers__-0-207"><a id="__codelineno-0-207" name="__codelineno-0-207"></a><span class="sd">        HDRImage dict with the following keys:</span>
-</span><span id="__linenumbers__-0-208"><a id="__codelineno-0-208" name="__codelineno-0-208"></a><span class="sd">        - ``data`` (np.ndarray): Linear HDR array, float32, shape (H, W, 3).</span>
-</span><span id="__linenumbers__-0-209"><a id="__codelineno-0-209" name="__codelineno-0-209"></a><span class="sd">        - ``transfer_function`` (str): Always &#39;linear&#39;.</span>
-</span><span id="__linenumbers__-0-210"><a id="__codelineno-0-210" name="__codelineno-0-210"></a>
-</span><span id="__linenumbers__-0-211"><a id="__codelineno-0-211" name="__codelineno-0-211"></a><span class="sd">    See Also:</span>
-</span><span id="__linenumbers__-0-212"><a id="__codelineno-0-212" name="__codelineno-0-212"></a><span class="sd">        - `hdr_to_gainmap`: Inverse operation, create gainmap from HDR.</span>
-</span><span id="__linenumbers__-0-213"><a id="__codelineno-0-213" name="__codelineno-0-213"></a><span class="sd">    &quot;&quot;&quot;</span>
+<span class="normal"><a href="#__codelineno-0-286">286</a></span>
+<span class="normal"><a href="#__codelineno-0-287">287</a></span>
+<span class="normal"><a href="#__codelineno-0-288">288</a></span>
+<span class="normal"><a href="#__codelineno-0-289">289</a></span>
+<span class="normal"><a href="#__codelineno-0-290">290</a></span>
+<span class="normal"><a href="#__codelineno-0-291">291</a></span>
+<span class="normal"><a href="#__codelineno-0-292">292</a></span>
+<span class="normal"><a href="#__codelineno-0-293">293</a></span>
+<span class="normal"><a href="#__codelineno-0-294">294</a></span>
+<span class="normal"><a href="#__codelineno-0-295">295</a></span>
+<span class="normal"><a href="#__codelineno-0-296">296</a></span>
+<span class="normal"><a href="#__codelineno-0-297">297</a></span>
+<span class="normal"><a href="#__codelineno-0-298">298</a></span>
+<span class="normal"><a href="#__codelineno-0-299">299</a></span>
+<span class="normal"><a href="#__codelineno-0-300">300</a></span>
+<span class="normal"><a href="#__codelineno-0-301">301</a></span>
+<span class="normal"><a href="#__codelineno-0-302">302</a></span>
+<span class="normal"><a href="#__codelineno-0-303">303</a></span>
+<span class="normal"><a href="#__codelineno-0-304">304</a></span>
+<span class="normal"><a href="#__codelineno-0-305">305</a></span>
+<span class="normal"><a href="#__codelineno-0-306">306</a></span>
+<span class="normal"><a href="#__codelineno-0-307">307</a></span>
+<span class="normal"><a href="#__codelineno-0-308">308</a></span>
+<span class="normal"><a href="#__codelineno-0-309">309</a></span>
+<span class="normal"><a href="#__codelineno-0-310">310</a></span>
+<span class="normal"><a href="#__codelineno-0-311">311</a></span>
+<span class="normal"><a href="#__codelineno-0-312">312</a></span>
+<span class="normal"><a href="#__codelineno-0-313">313</a></span>
+<span class="normal"><a href="#__codelineno-0-314">314</a></span>
+<span class="normal"><a href="#__codelineno-0-315">315</a></span>
+<span class="normal"><a href="#__codelineno-0-316">316</a></span>
+<span class="normal"><a href="#__codelineno-0-317">317</a></span>
+<span class="normal"><a href="#__codelineno-0-318">318</a></span>
+<span class="normal"><a href="#__codelineno-0-319">319</a></span>
+<span class="normal"><a href="#__codelineno-0-320">320</a></span>
+<span class="normal"><a href="#__codelineno-0-321">321</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__linenumbers__-0-209"><a id="__codelineno-0-209" name="__codelineno-0-209"></a><span class="k">def</span><span class="w"> </span><span class="nf">gainmap_to_hdr</span><span class="p">(</span>
+</span><span id="__linenumbers__-0-210"><a id="__codelineno-0-210" name="__codelineno-0-210"></a>    <span class="n">data</span><span class="p">:</span> <span class="n">GainmapImage</span><span class="p">,</span>
+</span><span id="__linenumbers__-0-211"><a id="__codelineno-0-211" name="__codelineno-0-211"></a>    <span class="n">gainmap_resize_method</span><span class="p">:</span> <span class="n">GainmapResizeMethod</span> <span class="o">=</span> <span class="s2">&quot;shepard&quot;</span><span class="p">,</span>
+</span><span id="__linenumbers__-0-212"><a id="__codelineno-0-212" name="__codelineno-0-212"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">HDRImage</span><span class="p">:</span>
+</span><span id="__linenumbers__-0-213"><a id="__codelineno-0-213" name="__codelineno-0-213"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Convert ISO 21496-1 Gainmap to linear HDR image.</span>
 </span><span id="__linenumbers__-0-214"><a id="__codelineno-0-214" name="__codelineno-0-214"></a>
-</span><span id="__linenumbers__-0-215"><a id="__codelineno-0-215" name="__codelineno-0-215"></a>    <span class="c1"># Linearize baseline</span>
-</span><span id="__linenumbers__-0-216"><a id="__codelineno-0-216" name="__codelineno-0-216"></a>    <span class="n">baseline</span> <span class="o">=</span> <span class="n">_normalize_sample_array</span><span class="p">(</span>
-</span><span id="__linenumbers__-0-217"><a id="__codelineno-0-217" name="__codelineno-0-217"></a>        <span class="n">data</span><span class="p">[</span><span class="s2">&quot;baseline&quot;</span><span class="p">],</span> <span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;baseline_bit_depth&quot;</span><span class="p">),</span> <span class="s2">&quot;baseline&quot;</span>
-</span><span id="__linenumbers__-0-218"><a id="__codelineno-0-218" name="__codelineno-0-218"></a>    <span class="p">)</span>
-</span><span id="__linenumbers__-0-219"><a id="__codelineno-0-219" name="__codelineno-0-219"></a>    <span class="n">icc_source</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;baseline_icc&quot;</span><span class="p">)</span>
-</span><span id="__linenumbers__-0-220"><a id="__codelineno-0-220" name="__codelineno-0-220"></a>    <span class="n">linear_baseline</span> <span class="o">=</span> <span class="kc">None</span>
-</span><span id="__linenumbers__-0-221"><a id="__codelineno-0-221" name="__codelineno-0-221"></a>    <span class="k">if</span> <span class="n">icc_source</span><span class="p">:</span>
-</span><span id="__linenumbers__-0-222"><a id="__codelineno-0-222" name="__codelineno-0-222"></a>        <span class="k">try</span><span class="p">:</span>
-</span><span id="__linenumbers__-0-223"><a id="__codelineno-0-223" name="__codelineno-0-223"></a>            <span class="n">linear_baseline</span> <span class="o">=</span> <span class="n">linearize_array_with_icc</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s2">&quot;baseline_icc&quot;</span><span class="p">],</span> <span class="n">baseline</span><span class="p">)</span>
-</span><span id="__linenumbers__-0-224"><a id="__codelineno-0-224" name="__codelineno-0-224"></a>        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
-</span><span id="__linenumbers__-0-225"><a id="__codelineno-0-225" name="__codelineno-0-225"></a>            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="n">e</span><span class="p">)</span>
-</span><span id="__linenumbers__-0-226"><a id="__codelineno-0-226" name="__codelineno-0-226"></a>    <span class="k">if</span> <span class="n">linear_baseline</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="__linenumbers__-0-227"><a id="__codelineno-0-227" name="__codelineno-0-227"></a>        <span class="n">linear_baseline</span> <span class="o">=</span> <span class="n">colour</span><span class="o">.</span><span class="n">eotf</span><span class="p">(</span><span class="n">baseline</span><span class="p">,</span> <span class="n">function</span><span class="o">=</span><span class="s2">&quot;sRGB&quot;</span><span class="p">)</span>
-</span><span id="__linenumbers__-0-228"><a id="__codelineno-0-228" name="__codelineno-0-228"></a>
-</span><span id="__linenumbers__-0-229"><a id="__codelineno-0-229" name="__codelineno-0-229"></a>    <span class="n">gainmap</span> <span class="o">=</span> <span class="n">_normalize_sample_array</span><span class="p">(</span>
-</span><span id="__linenumbers__-0-230"><a id="__codelineno-0-230" name="__codelineno-0-230"></a>        <span class="n">data</span><span class="p">[</span><span class="s2">&quot;gainmap&quot;</span><span class="p">],</span> <span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;gainmap_bit_depth&quot;</span><span class="p">),</span> <span class="s2">&quot;gainmap&quot;</span>
-</span><span id="__linenumbers__-0-231"><a id="__codelineno-0-231" name="__codelineno-0-231"></a>    <span class="p">)</span>
-</span><span id="__linenumbers__-0-232"><a id="__codelineno-0-232" name="__codelineno-0-232"></a>    <span class="n">metadata</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="s2">&quot;metadata&quot;</span><span class="p">]</span>
-</span><span id="__linenumbers__-0-233"><a id="__codelineno-0-233" name="__codelineno-0-233"></a>
-</span><span id="__linenumbers__-0-234"><a id="__codelineno-0-234" name="__codelineno-0-234"></a>    <span class="c1"># Resize gainmap to match baseline if needed</span>
-</span><span id="__linenumbers__-0-235"><a id="__codelineno-0-235" name="__codelineno-0-235"></a>    <span class="n">h</span><span class="p">,</span> <span class="n">w</span> <span class="o">=</span> <span class="n">baseline</span><span class="o">.</span><span class="n">shape</span><span class="p">[:</span><span class="mi">2</span><span class="p">]</span>
-</span><span id="__linenumbers__-0-236"><a id="__codelineno-0-236" name="__codelineno-0-236"></a>    <span class="k">if</span> <span class="n">gainmap</span><span class="o">.</span><span class="n">shape</span><span class="p">[:</span><span class="mi">2</span><span class="p">]</span> <span class="o">!=</span> <span class="p">(</span><span class="n">h</span><span class="p">,</span> <span class="n">w</span><span class="p">):</span>
-</span><span id="__linenumbers__-0-237"><a id="__codelineno-0-237" name="__codelineno-0-237"></a>        <span class="n">gainmap</span> <span class="o">=</span> <span class="n">_resize_gainmap_array</span><span class="p">(</span><span class="n">gainmap</span><span class="p">,</span> <span class="p">(</span><span class="n">w</span><span class="p">,</span> <span class="n">h</span><span class="p">),</span> <span class="n">gainmap_resize_method</span><span class="p">)</span>
-</span><span id="__linenumbers__-0-238"><a id="__codelineno-0-238" name="__codelineno-0-238"></a>
-</span><span id="__linenumbers__-0-239"><a id="__codelineno-0-239" name="__codelineno-0-239"></a>    <span class="c1"># Ensure gainmap is 3-channel for calculations</span>
-</span><span id="__linenumbers__-0-240"><a id="__codelineno-0-240" name="__codelineno-0-240"></a>    <span class="k">if</span> <span class="n">gainmap</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
-</span><span id="__linenumbers__-0-241"><a id="__codelineno-0-241" name="__codelineno-0-241"></a>        <span class="n">gainmap</span> <span class="o">=</span> <span class="n">gainmap</span><span class="p">[:,</span> <span class="p">:,</span> <span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">]</span>
-</span><span id="__linenumbers__-0-242"><a id="__codelineno-0-242" name="__codelineno-0-242"></a>    <span class="k">if</span> <span class="n">gainmap</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
-</span><span id="__linenumbers__-0-243"><a id="__codelineno-0-243" name="__codelineno-0-243"></a>        <span class="n">gainmap</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="n">gainmap</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
-</span><span id="__linenumbers__-0-244"><a id="__codelineno-0-244" name="__codelineno-0-244"></a>
-</span><span id="__linenumbers__-0-245"><a id="__codelineno-0-245" name="__codelineno-0-245"></a>    <span class="c1"># TODO: Move metadata channel normalization to a shared helper across I/O paths.</span>
-</span><span id="__linenumbers__-0-246"><a id="__codelineno-0-246" name="__codelineno-0-246"></a>    <span class="n">gainmap_min</span> <span class="o">=</span> <span class="n">_as_triplet</span><span class="p">(</span><span class="n">metadata</span><span class="p">[</span><span class="s2">&quot;gainmap_min&quot;</span><span class="p">],</span> <span class="s2">&quot;gainmap_min&quot;</span><span class="p">)</span>
-</span><span id="__linenumbers__-0-247"><a id="__codelineno-0-247" name="__codelineno-0-247"></a>    <span class="n">gainmap_max</span> <span class="o">=</span> <span class="n">_as_triplet</span><span class="p">(</span><span class="n">metadata</span><span class="p">[</span><span class="s2">&quot;gainmap_max&quot;</span><span class="p">],</span> <span class="s2">&quot;gainmap_max&quot;</span><span class="p">)</span>
-</span><span id="__linenumbers__-0-248"><a id="__codelineno-0-248" name="__codelineno-0-248"></a>    <span class="n">gainmap_gamma</span> <span class="o">=</span> <span class="n">_as_triplet</span><span class="p">(</span><span class="n">metadata</span><span class="p">[</span><span class="s2">&quot;gainmap_gamma&quot;</span><span class="p">],</span> <span class="s2">&quot;gainmap_gamma&quot;</span><span class="p">)</span>
-</span><span id="__linenumbers__-0-249"><a id="__codelineno-0-249" name="__codelineno-0-249"></a>    <span class="n">baseline_offset</span> <span class="o">=</span> <span class="n">_as_triplet</span><span class="p">(</span><span class="n">metadata</span><span class="p">[</span><span class="s2">&quot;baseline_offset&quot;</span><span class="p">],</span> <span class="s2">&quot;baseline_offset&quot;</span><span class="p">)</span>
-</span><span id="__linenumbers__-0-250"><a id="__codelineno-0-250" name="__codelineno-0-250"></a>    <span class="n">alternate_offset</span> <span class="o">=</span> <span class="n">_as_triplet</span><span class="p">(</span><span class="n">metadata</span><span class="p">[</span><span class="s2">&quot;alternate_offset&quot;</span><span class="p">],</span> <span class="s2">&quot;alternate_offset&quot;</span><span class="p">)</span>
-</span><span id="__linenumbers__-0-251"><a id="__codelineno-0-251" name="__codelineno-0-251"></a>
-</span><span id="__linenumbers__-0-252"><a id="__codelineno-0-252" name="__codelineno-0-252"></a>    <span class="n">gainmap</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="n">gainmap</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">)</span>
-</span><span id="__linenumbers__-0-253"><a id="__codelineno-0-253" name="__codelineno-0-253"></a>
-</span><span id="__linenumbers__-0-254"><a id="__codelineno-0-254" name="__codelineno-0-254"></a>    <span class="c1"># Decode gainmap: apply gamma, scale, and offset</span>
-</span><span id="__linenumbers__-0-255"><a id="__codelineno-0-255" name="__codelineno-0-255"></a>    <span class="n">gainmap_decoded</span> <span class="o">=</span> <span class="p">(</span><span class="n">gainmap</span> <span class="o">**</span> <span class="p">(</span><span class="mi">1</span> <span class="o">/</span> <span class="n">gainmap_gamma</span><span class="p">))</span> <span class="o">*</span> <span class="p">(</span>
-</span><span id="__linenumbers__-0-256"><a id="__codelineno-0-256" name="__codelineno-0-256"></a>        <span class="n">gainmap_max</span> <span class="o">-</span> <span class="n">gainmap_min</span>
-</span><span id="__linenumbers__-0-257"><a id="__codelineno-0-257" name="__codelineno-0-257"></a>    <span class="p">)</span> <span class="o">+</span> <span class="n">gainmap_min</span>
-</span><span id="__linenumbers__-0-258"><a id="__codelineno-0-258" name="__codelineno-0-258"></a>
-</span><span id="__linenumbers__-0-259"><a id="__codelineno-0-259" name="__codelineno-0-259"></a>    <span class="c1"># Convert to linear multiplier</span>
-</span><span id="__linenumbers__-0-260"><a id="__codelineno-0-260" name="__codelineno-0-260"></a>    <span class="n">gainmap_linear</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">exp2</span><span class="p">(</span><span class="n">gainmap_decoded</span><span class="p">)</span>
-</span><span id="__linenumbers__-0-261"><a id="__codelineno-0-261" name="__codelineno-0-261"></a>
-</span><span id="__linenumbers__-0-262"><a id="__codelineno-0-262" name="__codelineno-0-262"></a>    <span class="c1"># if use_base_colour_space is False, convert baseline to alternate space</span>
-</span><span id="__linenumbers__-0-263"><a id="__codelineno-0-263" name="__codelineno-0-263"></a>    <span class="k">if</span> <span class="ow">not</span> <span class="n">data</span><span class="p">[</span><span class="s2">&quot;metadata&quot;</span><span class="p">][</span><span class="s2">&quot;use_base_colour_space&quot;</span><span class="p">]:</span>
-</span><span id="__linenumbers__-0-264"><a id="__codelineno-0-264" name="__codelineno-0-264"></a>        <span class="n">linear_baseline_alt</span> <span class="o">=</span> <span class="kc">None</span>
-</span><span id="__linenumbers__-0-265"><a id="__codelineno-0-265" name="__codelineno-0-265"></a>        <span class="k">if</span> <span class="n">data</span><span class="p">[</span><span class="s2">&quot;baseline_icc&quot;</span><span class="p">]</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">data</span><span class="p">[</span><span class="s2">&quot;gainmap_icc&quot;</span><span class="p">]</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="__linenumbers__-0-266"><a id="__codelineno-0-266" name="__codelineno-0-266"></a>            <span class="k">try</span><span class="p">:</span>
-</span><span id="__linenumbers__-0-267"><a id="__codelineno-0-267" name="__codelineno-0-267"></a>                <span class="n">linear_baseline_alt</span> <span class="o">=</span> <span class="n">convert_array_with_icc_matrix</span><span class="p">(</span>
-</span><span id="__linenumbers__-0-268"><a id="__codelineno-0-268" name="__codelineno-0-268"></a>                    <span class="n">source_icc</span><span class="o">=</span><span class="n">data</span><span class="p">[</span><span class="s2">&quot;baseline_icc&quot;</span><span class="p">],</span>
-</span><span id="__linenumbers__-0-269"><a id="__codelineno-0-269" name="__codelineno-0-269"></a>                    <span class="n">target_icc</span><span class="o">=</span><span class="n">data</span><span class="p">[</span><span class="s2">&quot;gainmap_icc&quot;</span><span class="p">],</span>
-</span><span id="__linenumbers__-0-270"><a id="__codelineno-0-270" name="__codelineno-0-270"></a>                    <span class="n">img_array</span><span class="o">=</span><span class="n">linear_baseline</span><span class="p">,</span>
-</span><span id="__linenumbers__-0-271"><a id="__codelineno-0-271" name="__codelineno-0-271"></a>                <span class="p">)</span>
-</span><span id="__linenumbers__-0-272"><a id="__codelineno-0-272" name="__codelineno-0-272"></a>            <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
-</span><span id="__linenumbers__-0-273"><a id="__codelineno-0-273" name="__codelineno-0-273"></a>                <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="n">e</span><span class="p">)</span>
-</span><span id="__linenumbers__-0-274"><a id="__codelineno-0-274" name="__codelineno-0-274"></a>        <span class="k">if</span> <span class="n">linear_baseline_alt</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="__linenumbers__-0-275"><a id="__codelineno-0-275" name="__codelineno-0-275"></a>            <span class="n">linear_baseline_alt</span> <span class="o">=</span> <span class="n">linear_baseline</span>
-</span><span id="__linenumbers__-0-276"><a id="__codelineno-0-276" name="__codelineno-0-276"></a>        <span class="n">linear_baseline</span> <span class="o">=</span> <span class="n">linear_baseline_alt</span>
-</span><span id="__linenumbers__-0-277"><a id="__codelineno-0-277" name="__codelineno-0-277"></a>
-</span><span id="__linenumbers__-0-278"><a id="__codelineno-0-278" name="__codelineno-0-278"></a>    <span class="c1"># Reconstruct alternate (HDR) image</span>
-</span><span id="__linenumbers__-0-279"><a id="__codelineno-0-279" name="__codelineno-0-279"></a>    <span class="n">hdr_linear</span> <span class="o">=</span> <span class="n">gainmap_linear</span> <span class="o">*</span> <span class="p">(</span><span class="n">linear_baseline</span> <span class="o">+</span> <span class="n">baseline_offset</span><span class="p">)</span> <span class="o">-</span> <span class="n">alternate_offset</span>
-</span><span id="__linenumbers__-0-280"><a id="__codelineno-0-280" name="__codelineno-0-280"></a>    <span class="n">hdr_linear</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="n">hdr_linear</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
-</span><span id="__linenumbers__-0-281"><a id="__codelineno-0-281" name="__codelineno-0-281"></a>
-</span><span id="__linenumbers__-0-282"><a id="__codelineno-0-282" name="__codelineno-0-282"></a>    <span class="k">return</span> <span class="n">HDRImage</span><span class="p">(</span>
-</span><span id="__linenumbers__-0-283"><a id="__codelineno-0-283" name="__codelineno-0-283"></a>        <span class="n">data</span><span class="o">=</span><span class="n">hdr_linear</span><span class="p">,</span>
-</span><span id="__linenumbers__-0-284"><a id="__codelineno-0-284" name="__codelineno-0-284"></a>        <span class="n">transfer_function</span><span class="o">=</span><span class="s2">&quot;linear&quot;</span><span class="p">,</span>
-</span><span id="__linenumbers__-0-285"><a id="__codelineno-0-285" name="__codelineno-0-285"></a>        <span class="n">icc_profile</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
-</span><span id="__linenumbers__-0-286"><a id="__codelineno-0-286" name="__codelineno-0-286"></a>    <span class="p">)</span>
+</span><span id="__linenumbers__-0-215"><a id="__codelineno-0-215" name="__codelineno-0-215"></a><span class="sd">    Applies the gainmap to the baseline image to reconstruct the alternate</span>
+</span><span id="__linenumbers__-0-216"><a id="__codelineno-0-216" name="__codelineno-0-216"></a><span class="sd">    (HDR) representation using the ISO 21496-1 formula:</span>
+</span><span id="__linenumbers__-0-217"><a id="__codelineno-0-217" name="__codelineno-0-217"></a>
+</span><span id="__linenumbers__-0-218"><a id="__codelineno-0-218" name="__codelineno-0-218"></a><span class="sd">    - G&#39; = (G^(1/gamma)) * (max - min) + min</span>
+</span><span id="__linenumbers__-0-219"><a id="__codelineno-0-219" name="__codelineno-0-219"></a><span class="sd">    - L = 2^G&#39;</span>
+</span><span id="__linenumbers__-0-220"><a id="__codelineno-0-220" name="__codelineno-0-220"></a><span class="sd">    - HDR = L * (baseline + baseline_offset) - alternate_offset</span>
+</span><span id="__linenumbers__-0-221"><a id="__codelineno-0-221" name="__codelineno-0-221"></a>
+</span><span id="__linenumbers__-0-222"><a id="__codelineno-0-222" name="__codelineno-0-222"></a><span class="sd">    Args:</span>
+</span><span id="__linenumbers__-0-223"><a id="__codelineno-0-223" name="__codelineno-0-223"></a><span class="sd">        data: GainmapImage dict containing baseline, gainmap, and metadata.</span>
+</span><span id="__linenumbers__-0-224"><a id="__codelineno-0-224" name="__codelineno-0-224"></a><span class="sd">        gainmap_resize_method: Method used when gainmap and baseline dimensions differ.</span>
+</span><span id="__linenumbers__-0-225"><a id="__codelineno-0-225" name="__codelineno-0-225"></a><span class="sd">            ``&quot;shepard&quot;`` matches libultrahdr&#39;s 4-neighbour inverse-distance weighting.</span>
+</span><span id="__linenumbers__-0-226"><a id="__codelineno-0-226" name="__codelineno-0-226"></a><span class="sd">    Returns:</span>
+</span><span id="__linenumbers__-0-227"><a id="__codelineno-0-227" name="__codelineno-0-227"></a><span class="sd">        HDRImage dict with the following keys:</span>
+</span><span id="__linenumbers__-0-228"><a id="__codelineno-0-228" name="__codelineno-0-228"></a><span class="sd">        - ``data`` (np.ndarray): Linear HDR array, float32, shape (H, W, 3).</span>
+</span><span id="__linenumbers__-0-229"><a id="__codelineno-0-229" name="__codelineno-0-229"></a><span class="sd">        - ``transfer_function`` (str): Always &#39;linear&#39;.</span>
+</span><span id="__linenumbers__-0-230"><a id="__codelineno-0-230" name="__codelineno-0-230"></a><span class="sd">        - ``icc_profile`` (bytes | None): ICC profile describing the working</span>
+</span><span id="__linenumbers__-0-231"><a id="__codelineno-0-231" name="__codelineno-0-231"></a><span class="sd">          color space of the reconstruction: ``baseline_icc`` when</span>
+</span><span id="__linenumbers__-0-232"><a id="__codelineno-0-232" name="__codelineno-0-232"></a><span class="sd">          ``use_base_colour_space`` is True, otherwise ``gainmap_icc`` when the</span>
+</span><span id="__linenumbers__-0-233"><a id="__codelineno-0-233" name="__codelineno-0-233"></a><span class="sd">          baseline was converted to the alternate space (falling back to</span>
+</span><span id="__linenumbers__-0-234"><a id="__codelineno-0-234" name="__codelineno-0-234"></a><span class="sd">          ``baseline_icc`` if the conversion was skipped or failed).</span>
+</span><span id="__linenumbers__-0-235"><a id="__codelineno-0-235" name="__codelineno-0-235"></a>
+</span><span id="__linenumbers__-0-236"><a id="__codelineno-0-236" name="__codelineno-0-236"></a><span class="sd">    See Also:</span>
+</span><span id="__linenumbers__-0-237"><a id="__codelineno-0-237" name="__codelineno-0-237"></a><span class="sd">        - `hdr_to_gainmap`: Inverse operation, create gainmap from HDR.</span>
+</span><span id="__linenumbers__-0-238"><a id="__codelineno-0-238" name="__codelineno-0-238"></a><span class="sd">    &quot;&quot;&quot;</span>
+</span><span id="__linenumbers__-0-239"><a id="__codelineno-0-239" name="__codelineno-0-239"></a>
+</span><span id="__linenumbers__-0-240"><a id="__codelineno-0-240" name="__codelineno-0-240"></a>    <span class="c1"># Linearize baseline</span>
+</span><span id="__linenumbers__-0-241"><a id="__codelineno-0-241" name="__codelineno-0-241"></a>    <span class="n">baseline</span> <span class="o">=</span> <span class="n">_normalize_sample_array</span><span class="p">(</span>
+</span><span id="__linenumbers__-0-242"><a id="__codelineno-0-242" name="__codelineno-0-242"></a>        <span class="n">data</span><span class="p">[</span><span class="s2">&quot;baseline&quot;</span><span class="p">],</span> <span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;baseline_bit_depth&quot;</span><span class="p">),</span> <span class="s2">&quot;baseline&quot;</span>
+</span><span id="__linenumbers__-0-243"><a id="__codelineno-0-243" name="__codelineno-0-243"></a>    <span class="p">)</span>
+</span><span id="__linenumbers__-0-244"><a id="__codelineno-0-244" name="__codelineno-0-244"></a>    <span class="n">icc_source</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;baseline_icc&quot;</span><span class="p">)</span>
+</span><span id="__linenumbers__-0-245"><a id="__codelineno-0-245" name="__codelineno-0-245"></a>    <span class="n">linear_baseline</span> <span class="o">=</span> <span class="kc">None</span>
+</span><span id="__linenumbers__-0-246"><a id="__codelineno-0-246" name="__codelineno-0-246"></a>    <span class="k">if</span> <span class="n">icc_source</span><span class="p">:</span>
+</span><span id="__linenumbers__-0-247"><a id="__codelineno-0-247" name="__codelineno-0-247"></a>        <span class="k">try</span><span class="p">:</span>
+</span><span id="__linenumbers__-0-248"><a id="__codelineno-0-248" name="__codelineno-0-248"></a>            <span class="n">linear_baseline</span> <span class="o">=</span> <span class="n">linearize_array_with_icc</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s2">&quot;baseline_icc&quot;</span><span class="p">],</span> <span class="n">baseline</span><span class="p">)</span>
+</span><span id="__linenumbers__-0-249"><a id="__codelineno-0-249" name="__codelineno-0-249"></a>        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+</span><span id="__linenumbers__-0-250"><a id="__codelineno-0-250" name="__codelineno-0-250"></a>            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
+</span><span id="__linenumbers__-0-251"><a id="__codelineno-0-251" name="__codelineno-0-251"></a>                <span class="s2">&quot;Failed to linearize baseline with its ICC profile &quot;</span>
+</span><span id="__linenumbers__-0-252"><a id="__codelineno-0-252" name="__codelineno-0-252"></a>                <span class="sa">f</span><span class="s2">&quot;(</span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">e</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">); falling back to sRGB EOTF.&quot;</span><span class="p">,</span>
+</span><span id="__linenumbers__-0-253"><a id="__codelineno-0-253" name="__codelineno-0-253"></a>                <span class="n">stacklevel</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
+</span><span id="__linenumbers__-0-254"><a id="__codelineno-0-254" name="__codelineno-0-254"></a>            <span class="p">)</span>
+</span><span id="__linenumbers__-0-255"><a id="__codelineno-0-255" name="__codelineno-0-255"></a>    <span class="k">if</span> <span class="n">linear_baseline</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="__linenumbers__-0-256"><a id="__codelineno-0-256" name="__codelineno-0-256"></a>        <span class="n">linear_baseline</span> <span class="o">=</span> <span class="n">colour</span><span class="o">.</span><span class="n">eotf</span><span class="p">(</span><span class="n">baseline</span><span class="p">,</span> <span class="n">function</span><span class="o">=</span><span class="s2">&quot;sRGB&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+</span><span id="__linenumbers__-0-257"><a id="__codelineno-0-257" name="__codelineno-0-257"></a>
+</span><span id="__linenumbers__-0-258"><a id="__codelineno-0-258" name="__codelineno-0-258"></a>    <span class="n">gainmap</span> <span class="o">=</span> <span class="n">_normalize_sample_array</span><span class="p">(</span>
+</span><span id="__linenumbers__-0-259"><a id="__codelineno-0-259" name="__codelineno-0-259"></a>        <span class="n">data</span><span class="p">[</span><span class="s2">&quot;gainmap&quot;</span><span class="p">],</span> <span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;gainmap_bit_depth&quot;</span><span class="p">),</span> <span class="s2">&quot;gainmap&quot;</span>
+</span><span id="__linenumbers__-0-260"><a id="__codelineno-0-260" name="__codelineno-0-260"></a>    <span class="p">)</span>
+</span><span id="__linenumbers__-0-261"><a id="__codelineno-0-261" name="__codelineno-0-261"></a>    <span class="n">metadata</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="s2">&quot;metadata&quot;</span><span class="p">]</span>
+</span><span id="__linenumbers__-0-262"><a id="__codelineno-0-262" name="__codelineno-0-262"></a>
+</span><span id="__linenumbers__-0-263"><a id="__codelineno-0-263" name="__codelineno-0-263"></a>    <span class="c1"># Resize gainmap to match baseline if needed</span>
+</span><span id="__linenumbers__-0-264"><a id="__codelineno-0-264" name="__codelineno-0-264"></a>    <span class="n">h</span><span class="p">,</span> <span class="n">w</span> <span class="o">=</span> <span class="n">baseline</span><span class="o">.</span><span class="n">shape</span><span class="p">[:</span><span class="mi">2</span><span class="p">]</span>
+</span><span id="__linenumbers__-0-265"><a id="__codelineno-0-265" name="__codelineno-0-265"></a>    <span class="k">if</span> <span class="n">gainmap</span><span class="o">.</span><span class="n">shape</span><span class="p">[:</span><span class="mi">2</span><span class="p">]</span> <span class="o">!=</span> <span class="p">(</span><span class="n">h</span><span class="p">,</span> <span class="n">w</span><span class="p">):</span>
+</span><span id="__linenumbers__-0-266"><a id="__codelineno-0-266" name="__codelineno-0-266"></a>        <span class="n">gainmap</span> <span class="o">=</span> <span class="n">_resize_gainmap_array</span><span class="p">(</span><span class="n">gainmap</span><span class="p">,</span> <span class="p">(</span><span class="n">w</span><span class="p">,</span> <span class="n">h</span><span class="p">),</span> <span class="n">gainmap_resize_method</span><span class="p">)</span>
+</span><span id="__linenumbers__-0-267"><a id="__codelineno-0-267" name="__codelineno-0-267"></a>
+</span><span id="__linenumbers__-0-268"><a id="__codelineno-0-268" name="__codelineno-0-268"></a>    <span class="c1"># Ensure gainmap is 3-channel for calculations</span>
+</span><span id="__linenumbers__-0-269"><a id="__codelineno-0-269" name="__codelineno-0-269"></a>    <span class="k">if</span> <span class="n">gainmap</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+</span><span id="__linenumbers__-0-270"><a id="__codelineno-0-270" name="__codelineno-0-270"></a>        <span class="n">gainmap</span> <span class="o">=</span> <span class="n">gainmap</span><span class="p">[:,</span> <span class="p">:,</span> <span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">]</span>
+</span><span id="__linenumbers__-0-271"><a id="__codelineno-0-271" name="__codelineno-0-271"></a>    <span class="k">if</span> <span class="n">gainmap</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+</span><span id="__linenumbers__-0-272"><a id="__codelineno-0-272" name="__codelineno-0-272"></a>        <span class="n">gainmap</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="n">gainmap</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+</span><span id="__linenumbers__-0-273"><a id="__codelineno-0-273" name="__codelineno-0-273"></a>
+</span><span id="__linenumbers__-0-274"><a id="__codelineno-0-274" name="__codelineno-0-274"></a>    <span class="c1"># TODO: Move metadata channel normalization to a shared helper across I/O paths.</span>
+</span><span id="__linenumbers__-0-275"><a id="__codelineno-0-275" name="__codelineno-0-275"></a>    <span class="n">gainmap_min</span> <span class="o">=</span> <span class="n">_as_triplet</span><span class="p">(</span><span class="n">metadata</span><span class="p">[</span><span class="s2">&quot;gainmap_min&quot;</span><span class="p">],</span> <span class="s2">&quot;gainmap_min&quot;</span><span class="p">)</span>
+</span><span id="__linenumbers__-0-276"><a id="__codelineno-0-276" name="__codelineno-0-276"></a>    <span class="n">gainmap_max</span> <span class="o">=</span> <span class="n">_as_triplet</span><span class="p">(</span><span class="n">metadata</span><span class="p">[</span><span class="s2">&quot;gainmap_max&quot;</span><span class="p">],</span> <span class="s2">&quot;gainmap_max&quot;</span><span class="p">)</span>
+</span><span id="__linenumbers__-0-277"><a id="__codelineno-0-277" name="__codelineno-0-277"></a>    <span class="n">gainmap_gamma</span> <span class="o">=</span> <span class="n">_as_triplet</span><span class="p">(</span><span class="n">metadata</span><span class="p">[</span><span class="s2">&quot;gainmap_gamma&quot;</span><span class="p">],</span> <span class="s2">&quot;gainmap_gamma&quot;</span><span class="p">)</span>
+</span><span id="__linenumbers__-0-278"><a id="__codelineno-0-278" name="__codelineno-0-278"></a>    <span class="n">baseline_offset</span> <span class="o">=</span> <span class="n">_as_triplet</span><span class="p">(</span><span class="n">metadata</span><span class="p">[</span><span class="s2">&quot;baseline_offset&quot;</span><span class="p">],</span> <span class="s2">&quot;baseline_offset&quot;</span><span class="p">)</span>
+</span><span id="__linenumbers__-0-279"><a id="__codelineno-0-279" name="__codelineno-0-279"></a>    <span class="n">alternate_offset</span> <span class="o">=</span> <span class="n">_as_triplet</span><span class="p">(</span><span class="n">metadata</span><span class="p">[</span><span class="s2">&quot;alternate_offset&quot;</span><span class="p">],</span> <span class="s2">&quot;alternate_offset&quot;</span><span class="p">)</span>
+</span><span id="__linenumbers__-0-280"><a id="__codelineno-0-280" name="__codelineno-0-280"></a>
+</span><span id="__linenumbers__-0-281"><a id="__codelineno-0-281" name="__codelineno-0-281"></a>    <span class="n">gainmap</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="n">gainmap</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">)</span>
+</span><span id="__linenumbers__-0-282"><a id="__codelineno-0-282" name="__codelineno-0-282"></a>
+</span><span id="__linenumbers__-0-283"><a id="__codelineno-0-283" name="__codelineno-0-283"></a>    <span class="c1"># Decode gainmap: apply gamma, scale, and offset</span>
+</span><span id="__linenumbers__-0-284"><a id="__codelineno-0-284" name="__codelineno-0-284"></a>    <span class="n">gainmap_decoded</span> <span class="o">=</span> <span class="p">(</span><span class="n">gainmap</span> <span class="o">**</span> <span class="p">(</span><span class="mi">1</span> <span class="o">/</span> <span class="n">gainmap_gamma</span><span class="p">))</span> <span class="o">*</span> <span class="p">(</span>
+</span><span id="__linenumbers__-0-285"><a id="__codelineno-0-285" name="__codelineno-0-285"></a>        <span class="n">gainmap_max</span> <span class="o">-</span> <span class="n">gainmap_min</span>
+</span><span id="__linenumbers__-0-286"><a id="__codelineno-0-286" name="__codelineno-0-286"></a>    <span class="p">)</span> <span class="o">+</span> <span class="n">gainmap_min</span>
+</span><span id="__linenumbers__-0-287"><a id="__codelineno-0-287" name="__codelineno-0-287"></a>
+</span><span id="__linenumbers__-0-288"><a id="__codelineno-0-288" name="__codelineno-0-288"></a>    <span class="c1"># Convert to linear multiplier</span>
+</span><span id="__linenumbers__-0-289"><a id="__codelineno-0-289" name="__codelineno-0-289"></a>    <span class="n">gainmap_linear</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">exp2</span><span class="p">(</span><span class="n">gainmap_decoded</span><span class="p">)</span>
+</span><span id="__linenumbers__-0-290"><a id="__codelineno-0-290" name="__codelineno-0-290"></a>
+</span><span id="__linenumbers__-0-291"><a id="__codelineno-0-291" name="__codelineno-0-291"></a>    <span class="c1"># if use_base_colour_space is False, convert baseline to alternate space</span>
+</span><span id="__linenumbers__-0-292"><a id="__codelineno-0-292" name="__codelineno-0-292"></a>    <span class="n">output_icc</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;baseline_icc&quot;</span><span class="p">)</span>
+</span><span id="__linenumbers__-0-293"><a id="__codelineno-0-293" name="__codelineno-0-293"></a>    <span class="k">if</span> <span class="ow">not</span> <span class="n">data</span><span class="p">[</span><span class="s2">&quot;metadata&quot;</span><span class="p">][</span><span class="s2">&quot;use_base_colour_space&quot;</span><span class="p">]:</span>
+</span><span id="__linenumbers__-0-294"><a id="__codelineno-0-294" name="__codelineno-0-294"></a>        <span class="n">linear_baseline_alt</span> <span class="o">=</span> <span class="kc">None</span>
+</span><span id="__linenumbers__-0-295"><a id="__codelineno-0-295" name="__codelineno-0-295"></a>        <span class="k">if</span> <span class="n">data</span><span class="p">[</span><span class="s2">&quot;baseline_icc&quot;</span><span class="p">]</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">data</span><span class="p">[</span><span class="s2">&quot;gainmap_icc&quot;</span><span class="p">]</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="__linenumbers__-0-296"><a id="__codelineno-0-296" name="__codelineno-0-296"></a>            <span class="k">try</span><span class="p">:</span>
+</span><span id="__linenumbers__-0-297"><a id="__codelineno-0-297" name="__codelineno-0-297"></a>                <span class="n">linear_baseline_alt</span> <span class="o">=</span> <span class="n">convert_array_with_icc_matrix</span><span class="p">(</span>
+</span><span id="__linenumbers__-0-298"><a id="__codelineno-0-298" name="__codelineno-0-298"></a>                    <span class="n">source_icc</span><span class="o">=</span><span class="n">data</span><span class="p">[</span><span class="s2">&quot;baseline_icc&quot;</span><span class="p">],</span>
+</span><span id="__linenumbers__-0-299"><a id="__codelineno-0-299" name="__codelineno-0-299"></a>                    <span class="n">target_icc</span><span class="o">=</span><span class="n">data</span><span class="p">[</span><span class="s2">&quot;gainmap_icc&quot;</span><span class="p">],</span>
+</span><span id="__linenumbers__-0-300"><a id="__codelineno-0-300" name="__codelineno-0-300"></a>                    <span class="n">img_array</span><span class="o">=</span><span class="n">linear_baseline</span><span class="p">,</span>
+</span><span id="__linenumbers__-0-301"><a id="__codelineno-0-301" name="__codelineno-0-301"></a>                <span class="p">)</span>
+</span><span id="__linenumbers__-0-302"><a id="__codelineno-0-302" name="__codelineno-0-302"></a>                <span class="n">output_icc</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="s2">&quot;gainmap_icc&quot;</span><span class="p">]</span>
+</span><span id="__linenumbers__-0-303"><a id="__codelineno-0-303" name="__codelineno-0-303"></a>            <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+</span><span id="__linenumbers__-0-304"><a id="__codelineno-0-304" name="__codelineno-0-304"></a>                <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
+</span><span id="__linenumbers__-0-305"><a id="__codelineno-0-305" name="__codelineno-0-305"></a>                    <span class="s2">&quot;Failed to convert baseline to alternate color space &quot;</span>
+</span><span id="__linenumbers__-0-306"><a id="__codelineno-0-306" name="__codelineno-0-306"></a>                    <span class="sa">f</span><span class="s2">&quot;(</span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">e</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">); keeping baseline color space.&quot;</span><span class="p">,</span>
+</span><span id="__linenumbers__-0-307"><a id="__codelineno-0-307" name="__codelineno-0-307"></a>                    <span class="n">stacklevel</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
+</span><span id="__linenumbers__-0-308"><a id="__codelineno-0-308" name="__codelineno-0-308"></a>                <span class="p">)</span>
+</span><span id="__linenumbers__-0-309"><a id="__codelineno-0-309" name="__codelineno-0-309"></a>        <span class="k">if</span> <span class="n">linear_baseline_alt</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="__linenumbers__-0-310"><a id="__codelineno-0-310" name="__codelineno-0-310"></a>            <span class="n">linear_baseline_alt</span> <span class="o">=</span> <span class="n">linear_baseline</span>
+</span><span id="__linenumbers__-0-311"><a id="__codelineno-0-311" name="__codelineno-0-311"></a>        <span class="n">linear_baseline</span> <span class="o">=</span> <span class="n">linear_baseline_alt</span>
+</span><span id="__linenumbers__-0-312"><a id="__codelineno-0-312" name="__codelineno-0-312"></a>
+</span><span id="__linenumbers__-0-313"><a id="__codelineno-0-313" name="__codelineno-0-313"></a>    <span class="c1"># Reconstruct alternate (HDR) image</span>
+</span><span id="__linenumbers__-0-314"><a id="__codelineno-0-314" name="__codelineno-0-314"></a>    <span class="n">hdr_linear</span> <span class="o">=</span> <span class="n">gainmap_linear</span> <span class="o">*</span> <span class="p">(</span><span class="n">linear_baseline</span> <span class="o">+</span> <span class="n">baseline_offset</span><span class="p">)</span> <span class="o">-</span> <span class="n">alternate_offset</span>
+</span><span id="__linenumbers__-0-315"><a id="__codelineno-0-315" name="__codelineno-0-315"></a>    <span class="n">hdr_linear</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="n">hdr_linear</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">,</span> <span class="n">copy</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+</span><span id="__linenumbers__-0-316"><a id="__codelineno-0-316" name="__codelineno-0-316"></a>
+</span><span id="__linenumbers__-0-317"><a id="__codelineno-0-317" name="__codelineno-0-317"></a>    <span class="k">return</span> <span class="n">HDRImage</span><span class="p">(</span>
+</span><span id="__linenumbers__-0-318"><a id="__codelineno-0-318" name="__codelineno-0-318"></a>        <span class="n">data</span><span class="o">=</span><span class="n">hdr_linear</span><span class="p">,</span>
+</span><span id="__linenumbers__-0-319"><a id="__codelineno-0-319" name="__codelineno-0-319"></a>        <span class="n">transfer_function</span><span class="o">=</span><span class="s2">&quot;linear&quot;</span><span class="p">,</span>
+</span><span id="__linenumbers__-0-320"><a id="__codelineno-0-320" name="__codelineno-0-320"></a>        <span class="n">icc_profile</span><span class="o">=</span><span class="n">output_icc</span><span class="p">,</span>
+</span><span id="__linenumbers__-0-321"><a id="__codelineno-0-321" name="__codelineno-0-321"></a>    <span class="p">)</span>
 </span></code></pre></div></td></tr></table></div>
             </details>
     </div>
@@ -1447,7 +1488,8 @@ If baseline is not provided, generates one by clipping HDR to [0, 1].</p>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>HDRImage dict with linear HDR data in any supported color space.</p>
+                <p>HDRImage dict with linear HDR data in any supported color space.
+<code>transfer_function</code> must be <code>'linear'</code>.</p>
               </div>
             </td>
             <td>
@@ -1463,7 +1505,9 @@ If baseline is not provided, generates one by clipping HDR to [0, 1].</p>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>Optional pre-computed baseline (SDR) image.
+                <p>Optional pre-computed baseline (SDR) image in LINEAR light —
+do not pass sRGB/gamma-encoded data (the sRGB encoding is applied
+internally when storing the baseline).
 If None, generated by clipping HDR to [0, 1].
 Expected format: float32, shape (H, W, 3), range [0, 1].</p>
               </div>
@@ -1482,7 +1526,8 @@ Expected format: float32, shape (H, W, 3), range [0, 1].</p>
             <td>
               <div class="doc-md-description">
                 <p>Optional ICC profile bytes to embed in output.
-Should match the specified color_space.</p>
+Should describe the color space of <code>hdr['data']</code>. Defaults to
+<code>hdr['icc_profile']</code> when omitted.</p>
               </div>
             </td>
             <td>
@@ -1504,6 +1549,29 @@ Higher values compress highlights. Default: 1.0.</p>
             </td>
             <td>
                   <code>1.0</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+<p><span class="doc-section-title">Raises:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="ValueError">ValueError</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If <code>hdr['transfer_function']</code> is not <code>'linear'</code>.</p>
+              </div>
             </td>
           </tr>
       </tbody>
@@ -1609,42 +1677,7 @@ avoid division by zero in dark regions.</p>
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/hdrconv/convert/gainmap.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-289">289</a></span>
-<span class="normal"><a href="#__codelineno-0-290">290</a></span>
-<span class="normal"><a href="#__codelineno-0-291">291</a></span>
-<span class="normal"><a href="#__codelineno-0-292">292</a></span>
-<span class="normal"><a href="#__codelineno-0-293">293</a></span>
-<span class="normal"><a href="#__codelineno-0-294">294</a></span>
-<span class="normal"><a href="#__codelineno-0-295">295</a></span>
-<span class="normal"><a href="#__codelineno-0-296">296</a></span>
-<span class="normal"><a href="#__codelineno-0-297">297</a></span>
-<span class="normal"><a href="#__codelineno-0-298">298</a></span>
-<span class="normal"><a href="#__codelineno-0-299">299</a></span>
-<span class="normal"><a href="#__codelineno-0-300">300</a></span>
-<span class="normal"><a href="#__codelineno-0-301">301</a></span>
-<span class="normal"><a href="#__codelineno-0-302">302</a></span>
-<span class="normal"><a href="#__codelineno-0-303">303</a></span>
-<span class="normal"><a href="#__codelineno-0-304">304</a></span>
-<span class="normal"><a href="#__codelineno-0-305">305</a></span>
-<span class="normal"><a href="#__codelineno-0-306">306</a></span>
-<span class="normal"><a href="#__codelineno-0-307">307</a></span>
-<span class="normal"><a href="#__codelineno-0-308">308</a></span>
-<span class="normal"><a href="#__codelineno-0-309">309</a></span>
-<span class="normal"><a href="#__codelineno-0-310">310</a></span>
-<span class="normal"><a href="#__codelineno-0-311">311</a></span>
-<span class="normal"><a href="#__codelineno-0-312">312</a></span>
-<span class="normal"><a href="#__codelineno-0-313">313</a></span>
-<span class="normal"><a href="#__codelineno-0-314">314</a></span>
-<span class="normal"><a href="#__codelineno-0-315">315</a></span>
-<span class="normal"><a href="#__codelineno-0-316">316</a></span>
-<span class="normal"><a href="#__codelineno-0-317">317</a></span>
-<span class="normal"><a href="#__codelineno-0-318">318</a></span>
-<span class="normal"><a href="#__codelineno-0-319">319</a></span>
-<span class="normal"><a href="#__codelineno-0-320">320</a></span>
-<span class="normal"><a href="#__codelineno-0-321">321</a></span>
-<span class="normal"><a href="#__codelineno-0-322">322</a></span>
-<span class="normal"><a href="#__codelineno-0-323">323</a></span>
-<span class="normal"><a href="#__codelineno-0-324">324</a></span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-324">324</a></span>
 <span class="normal"><a href="#__codelineno-0-325">325</a></span>
 <span class="normal"><a href="#__codelineno-0-326">326</a></span>
 <span class="normal"><a href="#__codelineno-0-327">327</a></span>
@@ -1712,110 +1745,179 @@ avoid division by zero in dark regions.</p>
 <span class="normal"><a href="#__codelineno-0-389">389</a></span>
 <span class="normal"><a href="#__codelineno-0-390">390</a></span>
 <span class="normal"><a href="#__codelineno-0-391">391</a></span>
-<span class="normal"><a href="#__codelineno-0-392">392</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__linenumbers__-0-289"><a id="__codelineno-0-289" name="__codelineno-0-289"></a><span class="k">def</span><span class="w"> </span><span class="nf">hdr_to_gainmap</span><span class="p">(</span>
-</span><span id="__linenumbers__-0-290"><a id="__codelineno-0-290" name="__codelineno-0-290"></a>    <span class="n">hdr</span><span class="p">:</span> <span class="n">HDRImage</span><span class="p">,</span>
-</span><span id="__linenumbers__-0-291"><a id="__codelineno-0-291" name="__codelineno-0-291"></a>    <span class="n">baseline</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-</span><span id="__linenumbers__-0-292"><a id="__codelineno-0-292" name="__codelineno-0-292"></a>    <span class="n">icc_profile</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">bytes</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-</span><span id="__linenumbers__-0-293"><a id="__codelineno-0-293" name="__codelineno-0-293"></a>    <span class="n">gamma</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1.0</span><span class="p">,</span>
-</span><span id="__linenumbers__-0-294"><a id="__codelineno-0-294" name="__codelineno-0-294"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">GainmapImage</span><span class="p">:</span>
-</span><span id="__linenumbers__-0-295"><a id="__codelineno-0-295" name="__codelineno-0-295"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Convert linear HDR image to ISO 21496-1 Gainmap format.</span>
-</span><span id="__linenumbers__-0-296"><a id="__codelineno-0-296" name="__codelineno-0-296"></a>
-</span><span id="__linenumbers__-0-297"><a id="__codelineno-0-297" name="__codelineno-0-297"></a><span class="sd">    Creates a gainmap by computing the log2 ratio between HDR and SDR images.</span>
-</span><span id="__linenumbers__-0-298"><a id="__codelineno-0-298" name="__codelineno-0-298"></a><span class="sd">    If baseline is not provided, generates one by clipping HDR to [0, 1].</span>
-</span><span id="__linenumbers__-0-299"><a id="__codelineno-0-299" name="__codelineno-0-299"></a>
-</span><span id="__linenumbers__-0-300"><a id="__codelineno-0-300" name="__codelineno-0-300"></a><span class="sd">    Args:</span>
-</span><span id="__linenumbers__-0-301"><a id="__codelineno-0-301" name="__codelineno-0-301"></a><span class="sd">        hdr: HDRImage dict with linear HDR data in any supported color space.</span>
-</span><span id="__linenumbers__-0-302"><a id="__codelineno-0-302" name="__codelineno-0-302"></a><span class="sd">        baseline: Optional pre-computed baseline (SDR) image.</span>
-</span><span id="__linenumbers__-0-303"><a id="__codelineno-0-303" name="__codelineno-0-303"></a><span class="sd">            If None, generated by clipping HDR to [0, 1].</span>
-</span><span id="__linenumbers__-0-304"><a id="__codelineno-0-304" name="__codelineno-0-304"></a><span class="sd">            Expected format: float32, shape (H, W, 3), range [0, 1].</span>
-</span><span id="__linenumbers__-0-305"><a id="__codelineno-0-305" name="__codelineno-0-305"></a><span class="sd">        icc_profile: Optional ICC profile bytes to embed in output.</span>
-</span><span id="__linenumbers__-0-306"><a id="__codelineno-0-306" name="__codelineno-0-306"></a><span class="sd">            Should match the specified color_space.</span>
-</span><span id="__linenumbers__-0-307"><a id="__codelineno-0-307" name="__codelineno-0-307"></a><span class="sd">        gamma: Gainmap gamma parameter for encoding.</span>
-</span><span id="__linenumbers__-0-308"><a id="__codelineno-0-308" name="__codelineno-0-308"></a><span class="sd">            Higher values compress highlights. Default: 1.0.</span>
-</span><span id="__linenumbers__-0-309"><a id="__codelineno-0-309" name="__codelineno-0-309"></a>
-</span><span id="__linenumbers__-0-310"><a id="__codelineno-0-310" name="__codelineno-0-310"></a><span class="sd">    Returns:</span>
-</span><span id="__linenumbers__-0-311"><a id="__codelineno-0-311" name="__codelineno-0-311"></a><span class="sd">        GainmapImage dict containing:</span>
-</span><span id="__linenumbers__-0-312"><a id="__codelineno-0-312" name="__codelineno-0-312"></a><span class="sd">        - ``baseline`` (np.ndarray): SDR image, uint8, shape (H, W, 3).</span>
-</span><span id="__linenumbers__-0-313"><a id="__codelineno-0-313" name="__codelineno-0-313"></a><span class="sd">        - ``gainmap`` (np.ndarray): Gain map, uint8, shape (H, W, 3).</span>
-</span><span id="__linenumbers__-0-314"><a id="__codelineno-0-314" name="__codelineno-0-314"></a><span class="sd">        - ``metadata`` (GainmapMetadata): Computed transformation parameters.</span>
-</span><span id="__linenumbers__-0-315"><a id="__codelineno-0-315" name="__codelineno-0-315"></a><span class="sd">        - ``baseline_icc`` (bytes | None): Provided ICC profile.</span>
-</span><span id="__linenumbers__-0-316"><a id="__codelineno-0-316" name="__codelineno-0-316"></a><span class="sd">        - ``gainmap_icc`` (bytes | None): Provided ICC profile.</span>
-</span><span id="__linenumbers__-0-317"><a id="__codelineno-0-317" name="__codelineno-0-317"></a>
-</span><span id="__linenumbers__-0-318"><a id="__codelineno-0-318" name="__codelineno-0-318"></a><span class="sd">    Note:</span>
-</span><span id="__linenumbers__-0-319"><a id="__codelineno-0-319" name="__codelineno-0-319"></a><span class="sd">        Uses fixed offsets of 1/64 for both baseline and alternate to</span>
-</span><span id="__linenumbers__-0-320"><a id="__codelineno-0-320" name="__codelineno-0-320"></a><span class="sd">        avoid division by zero in dark regions.</span>
-</span><span id="__linenumbers__-0-321"><a id="__codelineno-0-321" name="__codelineno-0-321"></a>
-</span><span id="__linenumbers__-0-322"><a id="__codelineno-0-322" name="__codelineno-0-322"></a><span class="sd">    See Also:</span>
-</span><span id="__linenumbers__-0-323"><a id="__codelineno-0-323" name="__codelineno-0-323"></a><span class="sd">        - `gainmap_to_hdr`: Inverse operation, reconstruct HDR from gainmap.</span>
-</span><span id="__linenumbers__-0-324"><a id="__codelineno-0-324" name="__codelineno-0-324"></a><span class="sd">        - `write_21496`: Write GainmapImage to ISO 21496-1 JPEG.</span>
-</span><span id="__linenumbers__-0-325"><a id="__codelineno-0-325" name="__codelineno-0-325"></a><span class="sd">    &quot;&quot;&quot;</span>
-</span><span id="__linenumbers__-0-326"><a id="__codelineno-0-326" name="__codelineno-0-326"></a>    <span class="n">hdr_data</span> <span class="o">=</span> <span class="n">hdr</span><span class="p">[</span><span class="s2">&quot;data&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
-</span><span id="__linenumbers__-0-327"><a id="__codelineno-0-327" name="__codelineno-0-327"></a>
-</span><span id="__linenumbers__-0-328"><a id="__codelineno-0-328" name="__codelineno-0-328"></a>    <span class="c1"># Generate baseline if not provided</span>
-</span><span id="__linenumbers__-0-329"><a id="__codelineno-0-329" name="__codelineno-0-329"></a>    <span class="k">if</span> <span class="n">baseline</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="__linenumbers__-0-330"><a id="__codelineno-0-330" name="__codelineno-0-330"></a>        <span class="n">baseline</span> <span class="o">=</span> <span class="n">hdr_data</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
-</span><span id="__linenumbers__-0-331"><a id="__codelineno-0-331" name="__codelineno-0-331"></a>        <span class="n">baseline</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="n">baseline</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">)</span>
-</span><span id="__linenumbers__-0-332"><a id="__codelineno-0-332" name="__codelineno-0-332"></a>
-</span><span id="__linenumbers__-0-333"><a id="__codelineno-0-333" name="__codelineno-0-333"></a>    <span class="c1"># Compute alt headroom</span>
-</span><span id="__linenumbers__-0-334"><a id="__codelineno-0-334" name="__codelineno-0-334"></a>    <span class="n">alt_headroom</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">log2</span><span class="p">(</span><span class="n">hdr_data</span><span class="o">.</span><span class="n">max</span><span class="p">()</span> <span class="o">+</span> <span class="mf">1e-6</span><span class="p">)</span>
-</span><span id="__linenumbers__-0-335"><a id="__codelineno-0-335" name="__codelineno-0-335"></a>    <span class="c1"># temporarily set a minimum headroom to avoid extremely small values that can&#39;t be encoded</span>
-</span><span id="__linenumbers__-0-336"><a id="__codelineno-0-336" name="__codelineno-0-336"></a>    <span class="k">if</span> <span class="n">alt_headroom</span> <span class="o">&lt;=</span> <span class="mf">0.01</span><span class="p">:</span>
-</span><span id="__linenumbers__-0-337"><a id="__codelineno-0-337" name="__codelineno-0-337"></a>        <span class="n">alt_headroom</span> <span class="o">=</span> <span class="mf">0.01</span>
-</span><span id="__linenumbers__-0-338"><a id="__codelineno-0-338" name="__codelineno-0-338"></a>
-</span><span id="__linenumbers__-0-339"><a id="__codelineno-0-339" name="__codelineno-0-339"></a>    <span class="c1"># preset offset for both baseline and alternate = 1/64</span>
-</span><span id="__linenumbers__-0-340"><a id="__codelineno-0-340" name="__codelineno-0-340"></a>    <span class="n">alt_offset</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="mi">1</span> <span class="o">/</span> <span class="mi">64</span><span class="p">)</span>
-</span><span id="__linenumbers__-0-341"><a id="__codelineno-0-341" name="__codelineno-0-341"></a>    <span class="n">base_offset</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="mi">1</span> <span class="o">/</span> <span class="mi">64</span><span class="p">)</span>
-</span><span id="__linenumbers__-0-342"><a id="__codelineno-0-342" name="__codelineno-0-342"></a>
-</span><span id="__linenumbers__-0-343"><a id="__codelineno-0-343" name="__codelineno-0-343"></a>    <span class="n">ratio</span> <span class="o">=</span> <span class="p">(</span><span class="n">hdr_data</span> <span class="o">+</span> <span class="n">alt_offset</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">baseline</span> <span class="o">+</span> <span class="n">base_offset</span><span class="p">)</span>
-</span><span id="__linenumbers__-0-344"><a id="__codelineno-0-344" name="__codelineno-0-344"></a>    <span class="n">ratio</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="n">ratio</span><span class="p">,</span> <span class="mf">1e-6</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
-</span><span id="__linenumbers__-0-345"><a id="__codelineno-0-345" name="__codelineno-0-345"></a>
-</span><span id="__linenumbers__-0-346"><a id="__codelineno-0-346" name="__codelineno-0-346"></a>    <span class="n">gainmap_log</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">log2</span><span class="p">(</span><span class="n">ratio</span><span class="p">)</span>
-</span><span id="__linenumbers__-0-347"><a id="__codelineno-0-347" name="__codelineno-0-347"></a>
-</span><span id="__linenumbers__-0-348"><a id="__codelineno-0-348" name="__codelineno-0-348"></a>    <span class="n">gainmap_min_val</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">gainmap_log</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span>
-</span><span id="__linenumbers__-0-349"><a id="__codelineno-0-349" name="__codelineno-0-349"></a>    <span class="n">gainmap_max_val</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">gainmap_log</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span>
-</span><span id="__linenumbers__-0-350"><a id="__codelineno-0-350" name="__codelineno-0-350"></a>
-</span><span id="__linenumbers__-0-351"><a id="__codelineno-0-351" name="__codelineno-0-351"></a>    <span class="n">gainmap_norm</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">gainmap_log</span><span class="p">)</span>
-</span><span id="__linenumbers__-0-352"><a id="__codelineno-0-352" name="__codelineno-0-352"></a>    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">3</span><span class="p">):</span>
-</span><span id="__linenumbers__-0-353"><a id="__codelineno-0-353" name="__codelineno-0-353"></a>        <span class="n">diff</span> <span class="o">=</span> <span class="n">gainmap_max_val</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">-</span> <span class="n">gainmap_min_val</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
-</span><span id="__linenumbers__-0-354"><a id="__codelineno-0-354" name="__codelineno-0-354"></a>        <span class="k">if</span> <span class="n">diff</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
-</span><span id="__linenumbers__-0-355"><a id="__codelineno-0-355" name="__codelineno-0-355"></a>            <span class="n">gainmap_norm</span><span class="p">[:,</span> <span class="p">:,</span> <span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.0</span>
-</span><span id="__linenumbers__-0-356"><a id="__codelineno-0-356" name="__codelineno-0-356"></a>        <span class="k">else</span><span class="p">:</span>
-</span><span id="__linenumbers__-0-357"><a id="__codelineno-0-357" name="__codelineno-0-357"></a>            <span class="n">gainmap_norm</span><span class="p">[:,</span> <span class="p">:,</span> <span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">gainmap_log</span><span class="p">[:,</span> <span class="p">:,</span> <span class="n">i</span><span class="p">]</span> <span class="o">-</span> <span class="n">gainmap_min_val</span><span class="p">[</span><span class="n">i</span><span class="p">])</span> <span class="o">/</span> <span class="n">diff</span>
-</span><span id="__linenumbers__-0-358"><a id="__codelineno-0-358" name="__codelineno-0-358"></a>    <span class="n">gainmap_norm</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="n">gainmap_norm</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+<span class="normal"><a href="#__codelineno-0-392">392</a></span>
+<span class="normal"><a href="#__codelineno-0-393">393</a></span>
+<span class="normal"><a href="#__codelineno-0-394">394</a></span>
+<span class="normal"><a href="#__codelineno-0-395">395</a></span>
+<span class="normal"><a href="#__codelineno-0-396">396</a></span>
+<span class="normal"><a href="#__codelineno-0-397">397</a></span>
+<span class="normal"><a href="#__codelineno-0-398">398</a></span>
+<span class="normal"><a href="#__codelineno-0-399">399</a></span>
+<span class="normal"><a href="#__codelineno-0-400">400</a></span>
+<span class="normal"><a href="#__codelineno-0-401">401</a></span>
+<span class="normal"><a href="#__codelineno-0-402">402</a></span>
+<span class="normal"><a href="#__codelineno-0-403">403</a></span>
+<span class="normal"><a href="#__codelineno-0-404">404</a></span>
+<span class="normal"><a href="#__codelineno-0-405">405</a></span>
+<span class="normal"><a href="#__codelineno-0-406">406</a></span>
+<span class="normal"><a href="#__codelineno-0-407">407</a></span>
+<span class="normal"><a href="#__codelineno-0-408">408</a></span>
+<span class="normal"><a href="#__codelineno-0-409">409</a></span>
+<span class="normal"><a href="#__codelineno-0-410">410</a></span>
+<span class="normal"><a href="#__codelineno-0-411">411</a></span>
+<span class="normal"><a href="#__codelineno-0-412">412</a></span>
+<span class="normal"><a href="#__codelineno-0-413">413</a></span>
+<span class="normal"><a href="#__codelineno-0-414">414</a></span>
+<span class="normal"><a href="#__codelineno-0-415">415</a></span>
+<span class="normal"><a href="#__codelineno-0-416">416</a></span>
+<span class="normal"><a href="#__codelineno-0-417">417</a></span>
+<span class="normal"><a href="#__codelineno-0-418">418</a></span>
+<span class="normal"><a href="#__codelineno-0-419">419</a></span>
+<span class="normal"><a href="#__codelineno-0-420">420</a></span>
+<span class="normal"><a href="#__codelineno-0-421">421</a></span>
+<span class="normal"><a href="#__codelineno-0-422">422</a></span>
+<span class="normal"><a href="#__codelineno-0-423">423</a></span>
+<span class="normal"><a href="#__codelineno-0-424">424</a></span>
+<span class="normal"><a href="#__codelineno-0-425">425</a></span>
+<span class="normal"><a href="#__codelineno-0-426">426</a></span>
+<span class="normal"><a href="#__codelineno-0-427">427</a></span>
+<span class="normal"><a href="#__codelineno-0-428">428</a></span>
+<span class="normal"><a href="#__codelineno-0-429">429</a></span>
+<span class="normal"><a href="#__codelineno-0-430">430</a></span>
+<span class="normal"><a href="#__codelineno-0-431">431</a></span>
+<span class="normal"><a href="#__codelineno-0-432">432</a></span>
+<span class="normal"><a href="#__codelineno-0-433">433</a></span>
+<span class="normal"><a href="#__codelineno-0-434">434</a></span>
+<span class="normal"><a href="#__codelineno-0-435">435</a></span>
+<span class="normal"><a href="#__codelineno-0-436">436</a></span>
+<span class="normal"><a href="#__codelineno-0-437">437</a></span>
+<span class="normal"><a href="#__codelineno-0-438">438</a></span>
+<span class="normal"><a href="#__codelineno-0-439">439</a></span>
+<span class="normal"><a href="#__codelineno-0-440">440</a></span>
+<span class="normal"><a href="#__codelineno-0-441">441</a></span>
+<span class="normal"><a href="#__codelineno-0-442">442</a></span>
+<span class="normal"><a href="#__codelineno-0-443">443</a></span>
+<span class="normal"><a href="#__codelineno-0-444">444</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__linenumbers__-0-324"><a id="__codelineno-0-324" name="__codelineno-0-324"></a><span class="k">def</span><span class="w"> </span><span class="nf">hdr_to_gainmap</span><span class="p">(</span>
+</span><span id="__linenumbers__-0-325"><a id="__codelineno-0-325" name="__codelineno-0-325"></a>    <span class="n">hdr</span><span class="p">:</span> <span class="n">HDRImage</span><span class="p">,</span>
+</span><span id="__linenumbers__-0-326"><a id="__codelineno-0-326" name="__codelineno-0-326"></a>    <span class="n">baseline</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="__linenumbers__-0-327"><a id="__codelineno-0-327" name="__codelineno-0-327"></a>    <span class="n">icc_profile</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">bytes</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="__linenumbers__-0-328"><a id="__codelineno-0-328" name="__codelineno-0-328"></a>    <span class="n">gamma</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1.0</span><span class="p">,</span>
+</span><span id="__linenumbers__-0-329"><a id="__codelineno-0-329" name="__codelineno-0-329"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">GainmapImage</span><span class="p">:</span>
+</span><span id="__linenumbers__-0-330"><a id="__codelineno-0-330" name="__codelineno-0-330"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Convert linear HDR image to ISO 21496-1 Gainmap format.</span>
+</span><span id="__linenumbers__-0-331"><a id="__codelineno-0-331" name="__codelineno-0-331"></a>
+</span><span id="__linenumbers__-0-332"><a id="__codelineno-0-332" name="__codelineno-0-332"></a><span class="sd">    Creates a gainmap by computing the log2 ratio between HDR and SDR images.</span>
+</span><span id="__linenumbers__-0-333"><a id="__codelineno-0-333" name="__codelineno-0-333"></a><span class="sd">    If baseline is not provided, generates one by clipping HDR to [0, 1].</span>
+</span><span id="__linenumbers__-0-334"><a id="__codelineno-0-334" name="__codelineno-0-334"></a>
+</span><span id="__linenumbers__-0-335"><a id="__codelineno-0-335" name="__codelineno-0-335"></a><span class="sd">    Args:</span>
+</span><span id="__linenumbers__-0-336"><a id="__codelineno-0-336" name="__codelineno-0-336"></a><span class="sd">        hdr: HDRImage dict with linear HDR data in any supported color space.</span>
+</span><span id="__linenumbers__-0-337"><a id="__codelineno-0-337" name="__codelineno-0-337"></a><span class="sd">            ``transfer_function`` must be ``&#39;linear&#39;``.</span>
+</span><span id="__linenumbers__-0-338"><a id="__codelineno-0-338" name="__codelineno-0-338"></a><span class="sd">        baseline: Optional pre-computed baseline (SDR) image in LINEAR light —</span>
+</span><span id="__linenumbers__-0-339"><a id="__codelineno-0-339" name="__codelineno-0-339"></a><span class="sd">            do not pass sRGB/gamma-encoded data (the sRGB encoding is applied</span>
+</span><span id="__linenumbers__-0-340"><a id="__codelineno-0-340" name="__codelineno-0-340"></a><span class="sd">            internally when storing the baseline).</span>
+</span><span id="__linenumbers__-0-341"><a id="__codelineno-0-341" name="__codelineno-0-341"></a><span class="sd">            If None, generated by clipping HDR to [0, 1].</span>
+</span><span id="__linenumbers__-0-342"><a id="__codelineno-0-342" name="__codelineno-0-342"></a><span class="sd">            Expected format: float32, shape (H, W, 3), range [0, 1].</span>
+</span><span id="__linenumbers__-0-343"><a id="__codelineno-0-343" name="__codelineno-0-343"></a><span class="sd">        icc_profile: Optional ICC profile bytes to embed in output.</span>
+</span><span id="__linenumbers__-0-344"><a id="__codelineno-0-344" name="__codelineno-0-344"></a><span class="sd">            Should describe the color space of ``hdr[&#39;data&#39;]``. Defaults to</span>
+</span><span id="__linenumbers__-0-345"><a id="__codelineno-0-345" name="__codelineno-0-345"></a><span class="sd">            ``hdr[&#39;icc_profile&#39;]`` when omitted.</span>
+</span><span id="__linenumbers__-0-346"><a id="__codelineno-0-346" name="__codelineno-0-346"></a><span class="sd">        gamma: Gainmap gamma parameter for encoding.</span>
+</span><span id="__linenumbers__-0-347"><a id="__codelineno-0-347" name="__codelineno-0-347"></a><span class="sd">            Higher values compress highlights. Default: 1.0.</span>
+</span><span id="__linenumbers__-0-348"><a id="__codelineno-0-348" name="__codelineno-0-348"></a>
+</span><span id="__linenumbers__-0-349"><a id="__codelineno-0-349" name="__codelineno-0-349"></a><span class="sd">    Raises:</span>
+</span><span id="__linenumbers__-0-350"><a id="__codelineno-0-350" name="__codelineno-0-350"></a><span class="sd">        ValueError: If ``hdr[&#39;transfer_function&#39;]`` is not ``&#39;linear&#39;``.</span>
+</span><span id="__linenumbers__-0-351"><a id="__codelineno-0-351" name="__codelineno-0-351"></a>
+</span><span id="__linenumbers__-0-352"><a id="__codelineno-0-352" name="__codelineno-0-352"></a><span class="sd">    Returns:</span>
+</span><span id="__linenumbers__-0-353"><a id="__codelineno-0-353" name="__codelineno-0-353"></a><span class="sd">        GainmapImage dict containing:</span>
+</span><span id="__linenumbers__-0-354"><a id="__codelineno-0-354" name="__codelineno-0-354"></a><span class="sd">        - ``baseline`` (np.ndarray): SDR image, uint8, shape (H, W, 3).</span>
+</span><span id="__linenumbers__-0-355"><a id="__codelineno-0-355" name="__codelineno-0-355"></a><span class="sd">        - ``gainmap`` (np.ndarray): Gain map, uint8, shape (H, W, 3).</span>
+</span><span id="__linenumbers__-0-356"><a id="__codelineno-0-356" name="__codelineno-0-356"></a><span class="sd">        - ``metadata`` (GainmapMetadata): Computed transformation parameters.</span>
+</span><span id="__linenumbers__-0-357"><a id="__codelineno-0-357" name="__codelineno-0-357"></a><span class="sd">        - ``baseline_icc`` (bytes | None): Provided ICC profile.</span>
+</span><span id="__linenumbers__-0-358"><a id="__codelineno-0-358" name="__codelineno-0-358"></a><span class="sd">        - ``gainmap_icc`` (bytes | None): Provided ICC profile.</span>
 </span><span id="__linenumbers__-0-359"><a id="__codelineno-0-359" name="__codelineno-0-359"></a>
-</span><span id="__linenumbers__-0-360"><a id="__codelineno-0-360" name="__codelineno-0-360"></a>    <span class="n">gainmap_norm</span> <span class="o">=</span> <span class="n">gainmap_norm</span><span class="o">**</span><span class="n">gamma</span>
-</span><span id="__linenumbers__-0-361"><a id="__codelineno-0-361" name="__codelineno-0-361"></a>
-</span><span id="__linenumbers__-0-362"><a id="__codelineno-0-362" name="__codelineno-0-362"></a>    <span class="n">gainmap_uint8</span> <span class="o">=</span> <span class="p">(</span><span class="n">gainmap_norm</span> <span class="o">*</span> <span class="mi">255</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">)</span>
+</span><span id="__linenumbers__-0-360"><a id="__codelineno-0-360" name="__codelineno-0-360"></a><span class="sd">    Note:</span>
+</span><span id="__linenumbers__-0-361"><a id="__codelineno-0-361" name="__codelineno-0-361"></a><span class="sd">        Uses fixed offsets of 1/64 for both baseline and alternate to</span>
+</span><span id="__linenumbers__-0-362"><a id="__codelineno-0-362" name="__codelineno-0-362"></a><span class="sd">        avoid division by zero in dark regions.</span>
 </span><span id="__linenumbers__-0-363"><a id="__codelineno-0-363" name="__codelineno-0-363"></a>
-</span><span id="__linenumbers__-0-364"><a id="__codelineno-0-364" name="__codelineno-0-364"></a>    <span class="n">baseline</span> <span class="o">=</span> <span class="n">colour</span><span class="o">.</span><span class="n">eotf_inverse</span><span class="p">(</span><span class="n">baseline</span><span class="p">,</span> <span class="n">function</span><span class="o">=</span><span class="s2">&quot;sRGB&quot;</span><span class="p">)</span>
-</span><span id="__linenumbers__-0-365"><a id="__codelineno-0-365" name="__codelineno-0-365"></a>    <span class="n">baseline_uint8</span> <span class="o">=</span> <span class="p">(</span><span class="n">baseline</span> <span class="o">*</span> <span class="mi">255</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">)</span>
-</span><span id="__linenumbers__-0-366"><a id="__codelineno-0-366" name="__codelineno-0-366"></a>
-</span><span id="__linenumbers__-0-367"><a id="__codelineno-0-367" name="__codelineno-0-367"></a>    <span class="n">gainmap_min_val</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">gainmap_min_val</span><span class="o">.</span><span class="n">tolist</span><span class="p">())</span>
-</span><span id="__linenumbers__-0-368"><a id="__codelineno-0-368" name="__codelineno-0-368"></a>    <span class="n">gainmap_max_val</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">gainmap_max_val</span><span class="o">.</span><span class="n">tolist</span><span class="p">())</span>
-</span><span id="__linenumbers__-0-369"><a id="__codelineno-0-369" name="__codelineno-0-369"></a>
-</span><span id="__linenumbers__-0-370"><a id="__codelineno-0-370" name="__codelineno-0-370"></a>    <span class="n">metadata</span> <span class="o">=</span> <span class="n">GainmapMetadata</span><span class="p">(</span>
-</span><span id="__linenumbers__-0-371"><a id="__codelineno-0-371" name="__codelineno-0-371"></a>        <span class="n">minimum_version</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
-</span><span id="__linenumbers__-0-372"><a id="__codelineno-0-372" name="__codelineno-0-372"></a>        <span class="n">writer_version</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
-</span><span id="__linenumbers__-0-373"><a id="__codelineno-0-373" name="__codelineno-0-373"></a>        <span class="n">baseline_hdr_headroom</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span>
-</span><span id="__linenumbers__-0-374"><a id="__codelineno-0-374" name="__codelineno-0-374"></a>        <span class="n">alternate_hdr_headroom</span><span class="o">=</span><span class="nb">float</span><span class="p">(</span><span class="n">alt_headroom</span><span class="p">),</span>
-</span><span id="__linenumbers__-0-375"><a id="__codelineno-0-375" name="__codelineno-0-375"></a>        <span class="n">is_multichannel</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
-</span><span id="__linenumbers__-0-376"><a id="__codelineno-0-376" name="__codelineno-0-376"></a>        <span class="n">use_base_colour_space</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
-</span><span id="__linenumbers__-0-377"><a id="__codelineno-0-377" name="__codelineno-0-377"></a>        <span class="n">gainmap_min</span><span class="o">=</span><span class="n">gainmap_min_val</span><span class="p">,</span>
-</span><span id="__linenumbers__-0-378"><a id="__codelineno-0-378" name="__codelineno-0-378"></a>        <span class="n">gainmap_max</span><span class="o">=</span><span class="n">gainmap_max_val</span><span class="p">,</span>
-</span><span id="__linenumbers__-0-379"><a id="__codelineno-0-379" name="__codelineno-0-379"></a>        <span class="n">gainmap_gamma</span><span class="o">=</span><span class="p">(</span><span class="n">gamma</span><span class="p">,</span> <span class="n">gamma</span><span class="p">,</span> <span class="n">gamma</span><span class="p">),</span>
-</span><span id="__linenumbers__-0-380"><a id="__codelineno-0-380" name="__codelineno-0-380"></a>        <span class="n">baseline_offset</span><span class="o">=</span><span class="p">(</span><span class="n">base_offset</span><span class="p">,</span> <span class="n">base_offset</span><span class="p">,</span> <span class="n">base_offset</span><span class="p">),</span>
-</span><span id="__linenumbers__-0-381"><a id="__codelineno-0-381" name="__codelineno-0-381"></a>        <span class="n">alternate_offset</span><span class="o">=</span><span class="p">(</span><span class="n">alt_offset</span><span class="p">,</span> <span class="n">alt_offset</span><span class="p">,</span> <span class="n">alt_offset</span><span class="p">),</span>
-</span><span id="__linenumbers__-0-382"><a id="__codelineno-0-382" name="__codelineno-0-382"></a>    <span class="p">)</span>
-</span><span id="__linenumbers__-0-383"><a id="__codelineno-0-383" name="__codelineno-0-383"></a>
-</span><span id="__linenumbers__-0-384"><a id="__codelineno-0-384" name="__codelineno-0-384"></a>    <span class="k">return</span> <span class="n">GainmapImage</span><span class="p">(</span>
-</span><span id="__linenumbers__-0-385"><a id="__codelineno-0-385" name="__codelineno-0-385"></a>        <span class="n">baseline</span><span class="o">=</span><span class="n">baseline_uint8</span><span class="p">,</span>
-</span><span id="__linenumbers__-0-386"><a id="__codelineno-0-386" name="__codelineno-0-386"></a>        <span class="n">gainmap</span><span class="o">=</span><span class="n">gainmap_uint8</span><span class="p">,</span>
-</span><span id="__linenumbers__-0-387"><a id="__codelineno-0-387" name="__codelineno-0-387"></a>        <span class="n">metadata</span><span class="o">=</span><span class="n">metadata</span><span class="p">,</span>
-</span><span id="__linenumbers__-0-388"><a id="__codelineno-0-388" name="__codelineno-0-388"></a>        <span class="n">baseline_icc</span><span class="o">=</span><span class="n">icc_profile</span><span class="p">,</span>
-</span><span id="__linenumbers__-0-389"><a id="__codelineno-0-389" name="__codelineno-0-389"></a>        <span class="n">gainmap_icc</span><span class="o">=</span><span class="n">icc_profile</span><span class="p">,</span>
-</span><span id="__linenumbers__-0-390"><a id="__codelineno-0-390" name="__codelineno-0-390"></a>        <span class="n">baseline_bit_depth</span><span class="o">=</span><span class="mi">8</span><span class="p">,</span>
-</span><span id="__linenumbers__-0-391"><a id="__codelineno-0-391" name="__codelineno-0-391"></a>        <span class="n">gainmap_bit_depth</span><span class="o">=</span><span class="mi">8</span><span class="p">,</span>
-</span><span id="__linenumbers__-0-392"><a id="__codelineno-0-392" name="__codelineno-0-392"></a>    <span class="p">)</span>
+</span><span id="__linenumbers__-0-364"><a id="__codelineno-0-364" name="__codelineno-0-364"></a><span class="sd">    See Also:</span>
+</span><span id="__linenumbers__-0-365"><a id="__codelineno-0-365" name="__codelineno-0-365"></a><span class="sd">        - `gainmap_to_hdr`: Inverse operation, reconstruct HDR from gainmap.</span>
+</span><span id="__linenumbers__-0-366"><a id="__codelineno-0-366" name="__codelineno-0-366"></a><span class="sd">        - `write_21496`: Write GainmapImage to ISO 21496-1 JPEG.</span>
+</span><span id="__linenumbers__-0-367"><a id="__codelineno-0-367" name="__codelineno-0-367"></a><span class="sd">    &quot;&quot;&quot;</span>
+</span><span id="__linenumbers__-0-368"><a id="__codelineno-0-368" name="__codelineno-0-368"></a>    <span class="k">if</span> <span class="n">hdr</span><span class="p">[</span><span class="s2">&quot;transfer_function&quot;</span><span class="p">]</span> <span class="o">!=</span> <span class="s2">&quot;linear&quot;</span><span class="p">:</span>
+</span><span id="__linenumbers__-0-369"><a id="__codelineno-0-369" name="__codelineno-0-369"></a>        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+</span><span id="__linenumbers__-0-370"><a id="__codelineno-0-370" name="__codelineno-0-370"></a>            <span class="s2">&quot;hdr_to_gainmap requires linear HDR data, but got &quot;</span>
+</span><span id="__linenumbers__-0-371"><a id="__codelineno-0-371" name="__codelineno-0-371"></a>            <span class="sa">f</span><span class="s2">&quot;transfer_function=</span><span class="si">{</span><span class="n">hdr</span><span class="p">[</span><span class="s1">&#39;transfer_function&#39;</span><span class="p">]</span><span class="si">!r}</span><span class="s2">. Linearize the data &quot;</span>
+</span><span id="__linenumbers__-0-372"><a id="__codelineno-0-372" name="__codelineno-0-372"></a>            <span class="s2">&quot;first (apply the matching EOTF) before calling hdr_to_gainmap.&quot;</span>
+</span><span id="__linenumbers__-0-373"><a id="__codelineno-0-373" name="__codelineno-0-373"></a>        <span class="p">)</span>
+</span><span id="__linenumbers__-0-374"><a id="__codelineno-0-374" name="__codelineno-0-374"></a>
+</span><span id="__linenumbers__-0-375"><a id="__codelineno-0-375" name="__codelineno-0-375"></a>    <span class="k">if</span> <span class="n">icc_profile</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="__linenumbers__-0-376"><a id="__codelineno-0-376" name="__codelineno-0-376"></a>        <span class="n">icc_profile</span> <span class="o">=</span> <span class="n">hdr</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;icc_profile&quot;</span><span class="p">)</span>
+</span><span id="__linenumbers__-0-377"><a id="__codelineno-0-377" name="__codelineno-0-377"></a>
+</span><span id="__linenumbers__-0-378"><a id="__codelineno-0-378" name="__codelineno-0-378"></a>    <span class="n">hdr_data</span> <span class="o">=</span> <span class="n">hdr</span><span class="p">[</span><span class="s2">&quot;data&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+</span><span id="__linenumbers__-0-379"><a id="__codelineno-0-379" name="__codelineno-0-379"></a>
+</span><span id="__linenumbers__-0-380"><a id="__codelineno-0-380" name="__codelineno-0-380"></a>    <span class="c1"># Generate baseline if not provided</span>
+</span><span id="__linenumbers__-0-381"><a id="__codelineno-0-381" name="__codelineno-0-381"></a>    <span class="k">if</span> <span class="n">baseline</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="__linenumbers__-0-382"><a id="__codelineno-0-382" name="__codelineno-0-382"></a>        <span class="n">baseline</span> <span class="o">=</span> <span class="n">hdr_data</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+</span><span id="__linenumbers__-0-383"><a id="__codelineno-0-383" name="__codelineno-0-383"></a>        <span class="n">baseline</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="n">baseline</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">)</span>
+</span><span id="__linenumbers__-0-384"><a id="__codelineno-0-384" name="__codelineno-0-384"></a>
+</span><span id="__linenumbers__-0-385"><a id="__codelineno-0-385" name="__codelineno-0-385"></a>    <span class="c1"># Compute alt headroom</span>
+</span><span id="__linenumbers__-0-386"><a id="__codelineno-0-386" name="__codelineno-0-386"></a>    <span class="n">alt_headroom</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">log2</span><span class="p">(</span><span class="n">hdr_data</span><span class="o">.</span><span class="n">max</span><span class="p">()</span> <span class="o">+</span> <span class="mf">1e-6</span><span class="p">)</span>
+</span><span id="__linenumbers__-0-387"><a id="__codelineno-0-387" name="__codelineno-0-387"></a>    <span class="c1"># temporarily set a minimum headroom to avoid extremely small values that can&#39;t be encoded</span>
+</span><span id="__linenumbers__-0-388"><a id="__codelineno-0-388" name="__codelineno-0-388"></a>    <span class="k">if</span> <span class="n">alt_headroom</span> <span class="o">&lt;=</span> <span class="mf">0.01</span><span class="p">:</span>
+</span><span id="__linenumbers__-0-389"><a id="__codelineno-0-389" name="__codelineno-0-389"></a>        <span class="n">alt_headroom</span> <span class="o">=</span> <span class="mf">0.01</span>
+</span><span id="__linenumbers__-0-390"><a id="__codelineno-0-390" name="__codelineno-0-390"></a>
+</span><span id="__linenumbers__-0-391"><a id="__codelineno-0-391" name="__codelineno-0-391"></a>    <span class="c1"># preset offset for both baseline and alternate = 1/64</span>
+</span><span id="__linenumbers__-0-392"><a id="__codelineno-0-392" name="__codelineno-0-392"></a>    <span class="n">alt_offset</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="mi">1</span> <span class="o">/</span> <span class="mi">64</span><span class="p">)</span>
+</span><span id="__linenumbers__-0-393"><a id="__codelineno-0-393" name="__codelineno-0-393"></a>    <span class="n">base_offset</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="mi">1</span> <span class="o">/</span> <span class="mi">64</span><span class="p">)</span>
+</span><span id="__linenumbers__-0-394"><a id="__codelineno-0-394" name="__codelineno-0-394"></a>
+</span><span id="__linenumbers__-0-395"><a id="__codelineno-0-395" name="__codelineno-0-395"></a>    <span class="n">ratio</span> <span class="o">=</span> <span class="p">(</span><span class="n">hdr_data</span> <span class="o">+</span> <span class="n">alt_offset</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">baseline</span> <span class="o">+</span> <span class="n">base_offset</span><span class="p">)</span>
+</span><span id="__linenumbers__-0-396"><a id="__codelineno-0-396" name="__codelineno-0-396"></a>    <span class="n">ratio</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="n">ratio</span><span class="p">,</span> <span class="mf">1e-6</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+</span><span id="__linenumbers__-0-397"><a id="__codelineno-0-397" name="__codelineno-0-397"></a>
+</span><span id="__linenumbers__-0-398"><a id="__codelineno-0-398" name="__codelineno-0-398"></a>    <span class="n">gainmap_log</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">log2</span><span class="p">(</span><span class="n">ratio</span><span class="p">)</span>
+</span><span id="__linenumbers__-0-399"><a id="__codelineno-0-399" name="__codelineno-0-399"></a>
+</span><span id="__linenumbers__-0-400"><a id="__codelineno-0-400" name="__codelineno-0-400"></a>    <span class="n">gainmap_min_val</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">gainmap_log</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span>
+</span><span id="__linenumbers__-0-401"><a id="__codelineno-0-401" name="__codelineno-0-401"></a>    <span class="n">gainmap_max_val</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">gainmap_log</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span>
+</span><span id="__linenumbers__-0-402"><a id="__codelineno-0-402" name="__codelineno-0-402"></a>
+</span><span id="__linenumbers__-0-403"><a id="__codelineno-0-403" name="__codelineno-0-403"></a>    <span class="n">gainmap_norm</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">gainmap_log</span><span class="p">)</span>
+</span><span id="__linenumbers__-0-404"><a id="__codelineno-0-404" name="__codelineno-0-404"></a>    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">3</span><span class="p">):</span>
+</span><span id="__linenumbers__-0-405"><a id="__codelineno-0-405" name="__codelineno-0-405"></a>        <span class="n">diff</span> <span class="o">=</span> <span class="n">gainmap_max_val</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">-</span> <span class="n">gainmap_min_val</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+</span><span id="__linenumbers__-0-406"><a id="__codelineno-0-406" name="__codelineno-0-406"></a>        <span class="k">if</span> <span class="n">diff</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+</span><span id="__linenumbers__-0-407"><a id="__codelineno-0-407" name="__codelineno-0-407"></a>            <span class="n">gainmap_norm</span><span class="p">[:,</span> <span class="p">:,</span> <span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.0</span>
+</span><span id="__linenumbers__-0-408"><a id="__codelineno-0-408" name="__codelineno-0-408"></a>        <span class="k">else</span><span class="p">:</span>
+</span><span id="__linenumbers__-0-409"><a id="__codelineno-0-409" name="__codelineno-0-409"></a>            <span class="n">gainmap_norm</span><span class="p">[:,</span> <span class="p">:,</span> <span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">gainmap_log</span><span class="p">[:,</span> <span class="p">:,</span> <span class="n">i</span><span class="p">]</span> <span class="o">-</span> <span class="n">gainmap_min_val</span><span class="p">[</span><span class="n">i</span><span class="p">])</span> <span class="o">/</span> <span class="n">diff</span>
+</span><span id="__linenumbers__-0-410"><a id="__codelineno-0-410" name="__codelineno-0-410"></a>    <span class="n">gainmap_norm</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="n">gainmap_norm</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+</span><span id="__linenumbers__-0-411"><a id="__codelineno-0-411" name="__codelineno-0-411"></a>
+</span><span id="__linenumbers__-0-412"><a id="__codelineno-0-412" name="__codelineno-0-412"></a>    <span class="n">gainmap_norm</span> <span class="o">=</span> <span class="n">gainmap_norm</span><span class="o">**</span><span class="n">gamma</span>
+</span><span id="__linenumbers__-0-413"><a id="__codelineno-0-413" name="__codelineno-0-413"></a>
+</span><span id="__linenumbers__-0-414"><a id="__codelineno-0-414" name="__codelineno-0-414"></a>    <span class="n">gainmap_uint8</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="n">gainmap_norm</span> <span class="o">*</span> <span class="mi">255</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">)</span>
+</span><span id="__linenumbers__-0-415"><a id="__codelineno-0-415" name="__codelineno-0-415"></a>
+</span><span id="__linenumbers__-0-416"><a id="__codelineno-0-416" name="__codelineno-0-416"></a>    <span class="n">baseline</span> <span class="o">=</span> <span class="n">colour</span><span class="o">.</span><span class="n">eotf_inverse</span><span class="p">(</span><span class="n">baseline</span><span class="p">,</span> <span class="n">function</span><span class="o">=</span><span class="s2">&quot;sRGB&quot;</span><span class="p">)</span>
+</span><span id="__linenumbers__-0-417"><a id="__codelineno-0-417" name="__codelineno-0-417"></a>    <span class="n">baseline_uint8</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="n">baseline</span> <span class="o">*</span> <span class="mi">255</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">)</span>
+</span><span id="__linenumbers__-0-418"><a id="__codelineno-0-418" name="__codelineno-0-418"></a>
+</span><span id="__linenumbers__-0-419"><a id="__codelineno-0-419" name="__codelineno-0-419"></a>    <span class="n">gainmap_min_val</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">gainmap_min_val</span><span class="o">.</span><span class="n">tolist</span><span class="p">())</span>
+</span><span id="__linenumbers__-0-420"><a id="__codelineno-0-420" name="__codelineno-0-420"></a>    <span class="n">gainmap_max_val</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">gainmap_max_val</span><span class="o">.</span><span class="n">tolist</span><span class="p">())</span>
+</span><span id="__linenumbers__-0-421"><a id="__codelineno-0-421" name="__codelineno-0-421"></a>
+</span><span id="__linenumbers__-0-422"><a id="__codelineno-0-422" name="__codelineno-0-422"></a>    <span class="n">metadata</span> <span class="o">=</span> <span class="n">GainmapMetadata</span><span class="p">(</span>
+</span><span id="__linenumbers__-0-423"><a id="__codelineno-0-423" name="__codelineno-0-423"></a>        <span class="n">minimum_version</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+</span><span id="__linenumbers__-0-424"><a id="__codelineno-0-424" name="__codelineno-0-424"></a>        <span class="n">writer_version</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+</span><span id="__linenumbers__-0-425"><a id="__codelineno-0-425" name="__codelineno-0-425"></a>        <span class="n">baseline_hdr_headroom</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span>
+</span><span id="__linenumbers__-0-426"><a id="__codelineno-0-426" name="__codelineno-0-426"></a>        <span class="n">alternate_hdr_headroom</span><span class="o">=</span><span class="nb">float</span><span class="p">(</span><span class="n">alt_headroom</span><span class="p">),</span>
+</span><span id="__linenumbers__-0-427"><a id="__codelineno-0-427" name="__codelineno-0-427"></a>        <span class="n">is_multichannel</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+</span><span id="__linenumbers__-0-428"><a id="__codelineno-0-428" name="__codelineno-0-428"></a>        <span class="n">use_base_colour_space</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+</span><span id="__linenumbers__-0-429"><a id="__codelineno-0-429" name="__codelineno-0-429"></a>        <span class="n">gainmap_min</span><span class="o">=</span><span class="n">gainmap_min_val</span><span class="p">,</span>
+</span><span id="__linenumbers__-0-430"><a id="__codelineno-0-430" name="__codelineno-0-430"></a>        <span class="n">gainmap_max</span><span class="o">=</span><span class="n">gainmap_max_val</span><span class="p">,</span>
+</span><span id="__linenumbers__-0-431"><a id="__codelineno-0-431" name="__codelineno-0-431"></a>        <span class="n">gainmap_gamma</span><span class="o">=</span><span class="p">(</span><span class="n">gamma</span><span class="p">,</span> <span class="n">gamma</span><span class="p">,</span> <span class="n">gamma</span><span class="p">),</span>
+</span><span id="__linenumbers__-0-432"><a id="__codelineno-0-432" name="__codelineno-0-432"></a>        <span class="n">baseline_offset</span><span class="o">=</span><span class="p">(</span><span class="n">base_offset</span><span class="p">,</span> <span class="n">base_offset</span><span class="p">,</span> <span class="n">base_offset</span><span class="p">),</span>
+</span><span id="__linenumbers__-0-433"><a id="__codelineno-0-433" name="__codelineno-0-433"></a>        <span class="n">alternate_offset</span><span class="o">=</span><span class="p">(</span><span class="n">alt_offset</span><span class="p">,</span> <span class="n">alt_offset</span><span class="p">,</span> <span class="n">alt_offset</span><span class="p">),</span>
+</span><span id="__linenumbers__-0-434"><a id="__codelineno-0-434" name="__codelineno-0-434"></a>    <span class="p">)</span>
+</span><span id="__linenumbers__-0-435"><a id="__codelineno-0-435" name="__codelineno-0-435"></a>
+</span><span id="__linenumbers__-0-436"><a id="__codelineno-0-436" name="__codelineno-0-436"></a>    <span class="k">return</span> <span class="n">GainmapImage</span><span class="p">(</span>
+</span><span id="__linenumbers__-0-437"><a id="__codelineno-0-437" name="__codelineno-0-437"></a>        <span class="n">baseline</span><span class="o">=</span><span class="n">baseline_uint8</span><span class="p">,</span>
+</span><span id="__linenumbers__-0-438"><a id="__codelineno-0-438" name="__codelineno-0-438"></a>        <span class="n">gainmap</span><span class="o">=</span><span class="n">gainmap_uint8</span><span class="p">,</span>
+</span><span id="__linenumbers__-0-439"><a id="__codelineno-0-439" name="__codelineno-0-439"></a>        <span class="n">metadata</span><span class="o">=</span><span class="n">metadata</span><span class="p">,</span>
+</span><span id="__linenumbers__-0-440"><a id="__codelineno-0-440" name="__codelineno-0-440"></a>        <span class="n">baseline_icc</span><span class="o">=</span><span class="n">icc_profile</span><span class="p">,</span>
+</span><span id="__linenumbers__-0-441"><a id="__codelineno-0-441" name="__codelineno-0-441"></a>        <span class="n">gainmap_icc</span><span class="o">=</span><span class="n">icc_profile</span><span class="p">,</span>
+</span><span id="__linenumbers__-0-442"><a id="__codelineno-0-442" name="__codelineno-0-442"></a>        <span class="n">baseline_bit_depth</span><span class="o">=</span><span class="mi">8</span><span class="p">,</span>
+</span><span id="__linenumbers__-0-443"><a id="__codelineno-0-443" name="__codelineno-0-443"></a>        <span class="n">gainmap_bit_depth</span><span class="o">=</span><span class="mi">8</span><span class="p">,</span>
+</span><span id="__linenumbers__-0-444"><a id="__codelineno-0-444" name="__codelineno-0-444"></a>    <span class="p">)</span>
 </span></code></pre></div></td></tr></table></div>
             </details>
     </div>
