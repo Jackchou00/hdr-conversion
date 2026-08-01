@@ -7,8 +7,11 @@ This module provides functions for reading and writing various HDR formats:
 - Apple HEIC with gainmap: `read_apple_heic`
 - iOS HDR screenshot: `read_ios_hdr_screenshot`
 
+JPEG building blocks (encode a plain JPEG and embed ICC/APPn segments
+without PIL): `encode_jpeg`, `build_icc_segments`, `insert_segments`.
 """
 
+from ._jpeg import build_icc_segments, encode_jpeg, insert_segments
 from .iso21496 import read_21496, write_21496
 
 from .iso22028 import read_22028_pq, write_22028_pq
@@ -26,4 +29,7 @@ __all__ = [
     "read_ios_hdr_screenshot",
     "read_ultrahdr",
     "write_ultrahdr",
+    "encode_jpeg",
+    "build_icc_segments",
+    "insert_segments",
 ]

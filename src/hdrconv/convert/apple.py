@@ -44,7 +44,7 @@ def apple_heic_to_hdr(data: AppleHeicData) -> HDRImage:
         - ``data`` (np.ndarray): Linear HDR array, float32, shape (H, W, 3).
         - ``color_space`` (str): 'p3' (Display P3, Apple's default).
         - ``transfer_function`` (str): 'linear'.
-        - ``icc_profile`` (bytes | None): None.
+        - ``icc_profile`` (bytes | None): Source base-image ICC profile.
 
     Note:
         The gain map is upscaled from 1/4 resolution using bilinear interpolation.
@@ -60,6 +60,9 @@ def apple_heic_to_hdr(data: AppleHeicData) -> HDRImage:
     ) -> np.ndarray:
         if base_image is None or gain_map is None:
             raise ValueError("Both base_image and gain_map must be provided.")
+
+        if gain_map.ndim == 3 and gain_map.shape[-1] == 1:
+            gain_map = gain_map[..., 0]
 
         gain_map_resized = np.array(
             Image.fromarray(gain_map).resize(
@@ -78,9 +81,9 @@ def apple_heic_to_hdr(data: AppleHeicData) -> HDRImage:
 
         def srgb_to_linear(base_image_channel):
             return np.where(
-                base_image_channel <= 0.04,
-                base_image_channel * 0.077,
-                np.power((base_image_channel + 0.052) * 0.948, 2.4),
+                base_image_channel <= 0.04045,
+                base_image_channel / 12.92,
+                np.power((base_image_channel + 0.055) / 1.055, 2.4),
             )
 
         gain_map_linear = rec709_to_linear(gain_map_norm)
@@ -102,5 +105,5 @@ def apple_heic_to_hdr(data: AppleHeicData) -> HDRImage:
         data=hdr_linear,
         color_space="p3",  # Apple uses Display P3
         transfer_function="linear",
-        icc_profile=None,
+        icc_profile=data.get("icc_profile"),
     )

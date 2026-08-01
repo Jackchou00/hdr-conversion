@@ -22,20 +22,17 @@ import numpy as np
 # Read Gainmap file
 gainmap_data = io.read_21496("images/iso21496.jpg")
 
-# Prepare baseline: normalize, convert to linear light, then to BT.2020
-# Note: gainmap_to_hdr requires baseline in linear light space
-baseline_image = gainmap_data["baseline"].astype(np.float32) / 255.0
-baseline = colour.eotf(baseline_image, function="sRGB")  # Convert to linear
-baseline_bt2020 = colour.RGB_to_RGB(
-    baseline, input_colourspace="Display P3", output_colourspace="ITU-R BT.2020"
-)
-gainmap_data["baseline"] = (baseline_bt2020 * 255.0).astype(np.uint8)
-
 # Convert to linear HDR
+# (the baseline is linearized internally using its embedded ICC profile;
+#  this sample stores use_base_colour_space=False, so the result is already
+#  in the alternate colour space — BT.2020 for this file. The working space
+#  is reported via hdr["icc_profile"]; only convert if yours differs.)
 hdr = convert.gainmap_to_hdr(gainmap_data)
 
 # Apply PQ transfer function (reference white: 203 nits)
-pq_encoded = colour.eotf_inverse(hdr["data"] * 203.0, function="ITU-R BT.2100 PQ")
+hdr_bt2020 = np.clip(hdr["data"], 0.0, np.inf)
+pq_encoded = colour.eotf_inverse(hdr_bt2020 * 203.0, function="ITU-R BT.2100 PQ")
+pq_encoded = np.clip(pq_encoded, 0.0, 1.0)
 
 # Write PQ AVIF
 pq_data = {

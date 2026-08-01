@@ -118,7 +118,7 @@ def _linearize_array_with_icc_curv(trc_dict, img_array):
         values = trc_dict["values"]
         xp = np.linspace(0.0, 1.0, count)
         yp = np.array(values, dtype=np.float32)
-        return np.interp(X, xp, yp)
+        return np.interp(X, xp, yp).astype(np.float32)
 
 
 def linearize_array_with_icc(
@@ -133,22 +133,29 @@ def linearize_array_with_icc(
     Returns:
         Linearized image array, float32.
     """
-    # Intentional design: use only the first available TRC (rTRC > gTRC > bTRC)
+    # Intentional design: use only the first usable TRC (rTRC > gTRC > bTRC)
     # and apply it uniformly to all channels.  This is correct for profiles
     # where all channels share the same TRC (the common case), and avoids
     # per-channel splitting complexity.
     # TODO: Support per-channel TRC for profiles with distinct r/g/b curves.
     result = decode_icc(icc_file)
-    rtrc = result["tag_data"].get("rTRC")
-    gtrc = result["tag_data"].get("gTRC")
-    btrc = result["tag_data"].get("bTRC")
-    trcs = [rtrc, gtrc, btrc]
-    for trc in trcs:
+    tag_data = result["tag_data"]
+    errors = []
+    for sig in ("rTRC", "gTRC", "bTRC"):
+        if sig not in tag_data:
+            errors.append(f"{sig}: tag missing")
+            continue
+        trc = tag_data[sig]
+        # decode_icc stores tags of unhandled types as None.
         if trc is None:
-            raise ValueError("tag not found in ICC profile")
+            errors.append(f"{sig}: unsupported TRC type")
+            continue
         if trc.get("type") == "para":
             return _linearize_array_with_icc_para(trc, img_array)
         elif trc.get("type") == "curv":
             return _linearize_array_with_icc_curv(trc, img_array)
         else:
-            raise ValueError("unsupported TRC type")
+            errors.append(f"{sig}: unsupported TRC type '{trc.get('type')}'")
+    raise ValueError(
+        "no usable TRC tag in ICC profile ({})".format("; ".join(errors))
+    )

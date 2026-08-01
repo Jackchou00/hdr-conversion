@@ -29,6 +29,7 @@ import subprocess
 import tempfile
 from typing import Optional, Tuple
 
+import cv2
 import numpy as np
 import pillow_heif
 from PIL import Image
@@ -56,7 +57,8 @@ def _get_original_resolution(filepath: str) -> Tuple[int, int]:
     Returns:
         Tuple of (width, height) representing the actual image dimensions.
     """
-    heif_file = pillow_heif.read_heif(filepath, convert_hdr_to_8bit=False)
+    # open_heif reads metadata lazily without decoding pixel data.
+    heif_file = pillow_heif.open_heif(filepath, convert_hdr_to_8bit=False)
     return heif_file.size  # (width, height)
 
 
@@ -88,6 +90,26 @@ def _split_ids_into_groups(ids: list[int]) -> list[list[int]]:
     return groups
 
 
+def _decode_tile_to_png16(raw_path: str, png_path: str) -> None:
+    """Decode a raw HEVC tile to a lossless 16-bit RGB PNG with ffmpeg."""
+    subprocess.run(
+        ["ffmpeg", "-y", "-i", raw_path, "-c:v", "png", "-pix_fmt", "rgb48be", png_path],
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
+
+
+def _load_png16_rgb(path: str) -> np.ndarray:
+    """Load a 16-bit RGB PNG tile as a uint16 numpy array.
+
+    Uses cv2 because PIL truncates 16-bit-per-channel RGB PNGs to 8 bits.
+    """
+    arr = cv2.imread(path, cv2.IMREAD_UNCHANGED)
+    if arr is None:
+        raise ValueError(f"Failed to load tile image: {path}")
+    return arr[:, :, ::-1]  # BGR -> RGB
+
+
 def _process_tile_group(
     id_list: list[int],
     heic_path: str,
@@ -104,7 +126,7 @@ def _process_tile_group(
     # Extract each tile
     for i, item_id in enumerate(id_list):
         raw_path = os.path.join(temp_dir, f"{item_id}.hvc")
-        jpg_path = os.path.join(temp_dir, f"tile_{i:03d}.jpg")
+        png_path = os.path.join(temp_dir, f"tile_{i:03d}.png")
 
         # MP4Box dump
         param = f"{item_id}:path={raw_path}"
@@ -114,14 +136,10 @@ def _process_tile_group(
             stderr=subprocess.DEVNULL,
         )
 
-        # FFmpeg convert hvc -> jpg
+        # FFmpeg convert hvc -> lossless 16-bit PNG
         if os.path.exists(raw_path) and os.path.getsize(raw_path) > 0:
-            subprocess.run(
-                ["ffmpeg", "-y", "-i", raw_path, "-q:v", "2", jpg_path],
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
-            )
-            tile_paths.append(jpg_path)
+            _decode_tile_to_png16(raw_path, png_path)
+            tile_paths.append(png_path)
             os.remove(raw_path)
 
     expected_tiles = grid_cols * grid_rows
@@ -134,21 +152,18 @@ def _process_tile_group(
     canvas_w = grid_cols * tile_size
     canvas_h = grid_rows * tile_size
 
-    first_tile = Image.open(tile_paths[0])
-    mode = first_tile.mode
-    full_image = Image.new(mode, (canvas_w, canvas_h))
+    canvas = np.zeros((canvas_h, canvas_w, 3), dtype=np.uint16)
 
     for idx, img_path in enumerate(sorted(tile_paths)):
         row = idx // grid_cols
         col = idx % grid_cols
         x = col * tile_size
         y = row * tile_size
-        tile = Image.open(img_path)
-        full_image.paste(tile, (x, y))
+        tile = _load_png16_rgb(img_path)
+        canvas[y : y + tile.shape[0], x : x + tile.shape[1]] = tile
 
     # Crop to actual dimensions
-    final_image = full_image.crop((0, 0, real_width, real_height))
-    return np.array(final_image)
+    return canvas[:real_height, :real_width].copy()
 
 
 def _parse_u16_be(data: bytes) -> list[int]:
@@ -351,8 +366,8 @@ def read_ios_hdr_screenshot(
 
     Returns:
         GainmapImage dict containing:
-        - ``baseline`` (np.ndarray): Main image, uint8, shape (H, W, 3), Display P3.
-        - ``gainmap`` (np.ndarray): Gain map, uint8, shape (H, W, 3), three-channel.
+        - ``baseline`` (np.ndarray): Main image, uint16, shape (H, W, 3), Display P3.
+        - ``gainmap`` (np.ndarray): Gain map, uint16, shape (H, W, 3), three-channel.
         - ``metadata`` (GainmapMetadata): Contains gainmap_max, offset values.
         - ``baseline_icc`` (bytes | None): None.
         - ``gainmap_icc`` (bytes | None): None.
@@ -395,9 +410,11 @@ def read_ios_hdr_screenshot(
         # Split into groups (main image and gainmap)
         groups = _split_ids_into_groups(all_ids)
         if len(groups) < 2:
+            group_sizes = [len(g) for g in groups]
             raise ValueError(
                 "Expected at least 2 image groups (main + gainmap), "
-                f"found {len(groups)}"
+                f"found {len(groups)} group(s) with sizes {group_sizes} "
+                f"from hvc1 item IDs {all_ids}"
             )
 
         main_ids = groups[0]
@@ -414,7 +431,7 @@ def read_ios_hdr_screenshot(
             # Extract first tile to detect size
             first_id = main_ids[0]
             raw_path = os.path.join(temp_dir, f"{first_id}.hvc")
-            jpg_path = os.path.join(temp_dir, "first_tile.jpg")
+            png_path = os.path.join(temp_dir, "first_tile.png")
 
             param = f"{first_id}:path={raw_path}"
             subprocess.run(
@@ -422,15 +439,11 @@ def read_ios_hdr_screenshot(
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL,
             )
-            subprocess.run(
-                ["ffmpeg", "-y", "-i", raw_path, "-q:v", "2", jpg_path],
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
-            )
+            _decode_tile_to_png16(raw_path, png_path)
 
             detected_cols, detected_rows, detected_tile_size = _detect_grid_parameters(
                 len(main_ids),
-                jpg_path,
+                png_path,
                 real_width=real_width,
                 real_height=real_height,
             )
@@ -441,8 +454,8 @@ def read_ios_hdr_screenshot(
             # Clean up detection files
             if os.path.exists(raw_path):
                 os.remove(raw_path)
-            if os.path.exists(jpg_path):
-                os.remove(jpg_path)
+            if os.path.exists(png_path):
+                os.remove(png_path)
 
         # Process main image
         main_temp = os.path.join(temp_dir, "main")
@@ -495,20 +508,16 @@ def read_ios_hdr_screenshot(
             alternate_offset=(offset, offset, offset),
         )
 
-        # Ensure arrays are uint8
-        if main_image.dtype != np.uint8:
-            main_image = main_image.astype(np.uint8)
-        if gainmap_image.dtype != np.uint8:
-            gainmap_image = gainmap_image.astype(np.uint8)
-
+        # ffmpeg upscales the 10-bit HEVC samples into the full 16-bit PNG
+        # container, so the arrays are true 16-bit uint16 data.
         return GainmapImage(
             baseline=main_image,
             gainmap=gainmap_image,
             metadata=metadata,
             baseline_icc=None,
             gainmap_icc=None,
-            baseline_bit_depth=10,
-            gainmap_bit_depth=10,
+            baseline_bit_depth=16,
+            gainmap_bit_depth=16,
         )
 
     finally:

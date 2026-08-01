@@ -75,7 +75,7 @@ def _prepare_gainmap_for_resize(gainmap: np.ndarray) -> np.ndarray:
 def _resize_gainmap_shepard(gainmap: np.ndarray, size: tuple[int, int]) -> np.ndarray:
     """Resize a gainmap using libultrahdr-style 4-neighbour Shepard IDW."""
     gainmap = _prepare_gainmap_for_resize(gainmap)
-    src_h, src_w, channels = gainmap.shape
+    src_h, src_w = gainmap.shape[:2]
     dst_w, dst_h = size
 
     if dst_w <= 0 or dst_h <= 0:
@@ -89,20 +89,34 @@ def _resize_gainmap_shepard(gainmap: np.ndarray, size: tuple[int, int]) -> np.nd
     x_upper = np.minimum(x_lower + 1, src_w - 1)
     x_lower = np.minimum(x_lower, src_w - 1)
 
-    x_lower_f = x_lower.astype(np.float32)
-    x_upper_f = x_upper.astype(np.float32)
-    dx_lower = x_map - x_lower_f
-    dx_upper = x_map - x_upper_f
+    dx_lower = x_map - x_lower.astype(np.float32)
+    dx_upper = x_map - x_upper.astype(np.float32)
 
-    resized = np.empty((dst_h, dst_w, channels), dtype=np.float32)
+    y_map = (np.arange(dst_h) / scale_y).astype(np.float32)
+    y_lower_all = np.minimum(np.floor(y_map).astype(np.intp), src_h - 1)
+    y_upper_all = np.minimum(y_lower_all + 1, src_h - 1)
 
-    for y in range(dst_h):
-        y_map = np.float32(y / scale_y)
-        y_lower = min(int(np.floor(y_map)), src_h - 1)
-        y_upper = min(y_lower + 1, src_h - 1)
+    dy_lower_all = (y_map - y_lower_all.astype(np.float32))[:, np.newaxis]
+    dy_upper_all = (y_map - y_upper_all.astype(np.float32))[:, np.newaxis]
 
-        dy_lower = y_map - np.float32(y_lower)
-        dy_upper = y_map - np.float32(y_upper)
+    # Channel-first layout keeps the per-channel arithmetic on contiguous 2D planes.
+    planes = np.ascontiguousarray(np.moveaxis(gainmap, 2, 0))
+    cols_lower = np.take(planes, x_lower, axis=2)
+    cols_upper = np.take(planes, x_upper, axis=2)
+
+    out = np.empty((gainmap.shape[2], dst_h, dst_w), dtype=np.float32)
+
+    # Process destination rows in blocks: the fully vectorized form
+    # materializes ~16 destination-size planes at once, which peaks at
+    # gigabytes for 48MP upscales. ~1M elements per plane bounds the
+    # temporaries while keeping the inner math vectorized.
+    block_rows = max(1, (1 << 20) // max(dst_w, 1))
+    for y0 in range(0, dst_h, block_rows):
+        y1 = min(y0 + block_rows, dst_h)
+        y_lower = y_lower_all[y0:y1]
+        y_upper = y_upper_all[y0:y1]
+        dy_lower = dy_lower_all[y0:y1]
+        dy_upper = dy_upper_all[y0:y1]
 
         d1 = np.hypot(dx_lower, dy_lower)
         d2 = np.hypot(dx_lower, dy_upper)
@@ -114,32 +128,38 @@ def _resize_gainmap_shepard(gainmap: np.ndarray, size: tuple[int, int]) -> np.nd
         w3 = np.divide(1.0, d3, out=np.zeros_like(d3), where=d3 != 0.0)
         w4 = np.divide(1.0, d4, out=np.zeros_like(d4), where=d4 != 0.0)
         total = w1 + w2 + w3 + w4
-        exact_any = (d1 == 0.0) | (d2 == 0.0) | (d3 == 0.0) | (d4 == 0.0)
+        # d_i == 0 exactly when both fraction components are 0
+        # (hypot(x, y) >= max(|x|, |y|)).
+        exact_any = ((dy_lower == 0.0) | (dy_upper == 0.0)) & (
+            (dx_lower == 0.0) | (dx_upper == 0.0)
+        )
         total = np.where(exact_any, 1.0, total)
 
-        row = (
-            gainmap[y_lower, x_lower] * w1[:, np.newaxis]
-            + gainmap[y_upper, x_lower] * w2[:, np.newaxis]
-            + gainmap[y_lower, x_upper] * w3[:, np.newaxis]
-            + gainmap[y_upper, x_upper] * w4[:, np.newaxis]
-        ) / total[:, np.newaxis]
+        v1 = np.take(cols_lower, y_lower, axis=1)
+        v2 = np.take(cols_lower, y_upper, axis=1)
+        v3 = np.take(cols_upper, y_lower, axis=1)
+        v4 = np.take(cols_upper, y_upper, axis=1)
 
-        exact = d1 == 0.0
-        if np.any(exact):
-            row[exact] = gainmap[y_lower, x_lower[exact]]
-        exact = d2 == 0.0
-        if np.any(exact):
-            row[exact] = gainmap[y_upper, x_lower[exact]]
-        exact = d3 == 0.0
-        if np.any(exact):
-            row[exact] = gainmap[y_lower, x_upper[exact]]
-        exact = d4 == 0.0
-        if np.any(exact):
-            row[exact] = gainmap[y_upper, x_upper[exact]]
+        resized = v1 * w1
+        resized += v2 * w2
+        resized += v3 * w3
+        resized += v4 * w4
+        resized /= total
 
-        resized[y] = row
+        for dx, dy, v in (
+            (dx_lower, dy_lower, v1),
+            (dx_lower, dy_upper, v2),
+            (dx_upper, dy_lower, v3),
+            (dx_upper, dy_upper, v4),
+        ):
+            rows = np.flatnonzero(dy == 0.0)
+            cols = np.flatnonzero(dx == 0.0)
+            if rows.size and cols.size:
+                resized[:, rows[:, np.newaxis], cols] = v[:, rows[:, np.newaxis], cols]
 
-    return resized
+        out[:, y0:y1] = resized
+
+    return np.ascontiguousarray(np.moveaxis(out, 0, 2))
 
 
 def _resize_gainmap_cv2(
@@ -207,6 +227,11 @@ def gainmap_to_hdr(
         HDRImage dict with the following keys:
         - ``data`` (np.ndarray): Linear HDR array, float32, shape (H, W, 3).
         - ``transfer_function`` (str): Always 'linear'.
+        - ``icc_profile`` (bytes | None): ICC profile describing the working
+          color space of the reconstruction: ``baseline_icc`` when
+          ``use_base_colour_space`` is True, otherwise ``gainmap_icc`` when the
+          baseline was converted to the alternate space (falling back to
+          ``baseline_icc`` if the conversion was skipped or failed).
 
     See Also:
         - `hdr_to_gainmap`: Inverse operation, create gainmap from HDR.
@@ -222,9 +247,13 @@ def gainmap_to_hdr(
         try:
             linear_baseline = linearize_array_with_icc(data["baseline_icc"], baseline)
         except Exception as e:
-            warnings.warn(e)
+            warnings.warn(
+                "Failed to linearize baseline with its ICC profile "
+                f"({type(e).__name__}: {e}); falling back to sRGB EOTF.",
+                stacklevel=2,
+            )
     if linear_baseline is None:
-        linear_baseline = colour.eotf(baseline, function="sRGB")
+        linear_baseline = colour.eotf(baseline, function="sRGB").astype(np.float32)
 
     gainmap = _normalize_sample_array(
         data["gainmap"], data.get("gainmap_bit_depth"), "gainmap"
@@ -260,6 +289,7 @@ def gainmap_to_hdr(
     gainmap_linear = np.exp2(gainmap_decoded)
 
     # if use_base_colour_space is False, convert baseline to alternate space
+    output_icc = data.get("baseline_icc")
     if not data["metadata"]["use_base_colour_space"]:
         linear_baseline_alt = None
         if data["baseline_icc"] is not None and data["gainmap_icc"] is not None:
@@ -269,20 +299,25 @@ def gainmap_to_hdr(
                     target_icc=data["gainmap_icc"],
                     img_array=linear_baseline,
                 )
+                output_icc = data["gainmap_icc"]
             except Exception as e:
-                warnings.warn(e)
+                warnings.warn(
+                    "Failed to convert baseline to alternate color space "
+                    f"({type(e).__name__}: {e}); keeping baseline color space.",
+                    stacklevel=2,
+                )
         if linear_baseline_alt is None:
             linear_baseline_alt = linear_baseline
         linear_baseline = linear_baseline_alt
 
     # Reconstruct alternate (HDR) image
     hdr_linear = gainmap_linear * (linear_baseline + baseline_offset) - alternate_offset
-    hdr_linear = np.clip(hdr_linear, 0.0, None)
+    hdr_linear = np.clip(hdr_linear, 0.0, None).astype(np.float32, copy=False)
 
     return HDRImage(
         data=hdr_linear,
         transfer_function="linear",
-        icc_profile=None,
+        icc_profile=output_icc,
     )
 
 
@@ -299,13 +334,20 @@ def hdr_to_gainmap(
 
     Args:
         hdr: HDRImage dict with linear HDR data in any supported color space.
-        baseline: Optional pre-computed baseline (SDR) image.
+            ``transfer_function`` must be ``'linear'``.
+        baseline: Optional pre-computed baseline (SDR) image in LINEAR light —
+            do not pass sRGB/gamma-encoded data (the sRGB encoding is applied
+            internally when storing the baseline).
             If None, generated by clipping HDR to [0, 1].
             Expected format: float32, shape (H, W, 3), range [0, 1].
         icc_profile: Optional ICC profile bytes to embed in output.
-            Should match the specified color_space.
+            Should describe the color space of ``hdr['data']``. Defaults to
+            ``hdr['icc_profile']`` when omitted.
         gamma: Gainmap gamma parameter for encoding.
             Higher values compress highlights. Default: 1.0.
+
+    Raises:
+        ValueError: If ``hdr['transfer_function']`` is not ``'linear'``.
 
     Returns:
         GainmapImage dict containing:
@@ -323,6 +365,16 @@ def hdr_to_gainmap(
         - `gainmap_to_hdr`: Inverse operation, reconstruct HDR from gainmap.
         - `write_21496`: Write GainmapImage to ISO 21496-1 JPEG.
     """
+    if hdr["transfer_function"] != "linear":
+        raise ValueError(
+            "hdr_to_gainmap requires linear HDR data, but got "
+            f"transfer_function={hdr['transfer_function']!r}. Linearize the data "
+            "first (apply the matching EOTF) before calling hdr_to_gainmap."
+        )
+
+    if icc_profile is None:
+        icc_profile = hdr.get("icc_profile")
+
     hdr_data = hdr["data"].astype(np.float32)
 
     # Generate baseline if not provided
@@ -359,10 +411,10 @@ def hdr_to_gainmap(
 
     gainmap_norm = gainmap_norm**gamma
 
-    gainmap_uint8 = (gainmap_norm * 255).astype(np.uint8)
+    gainmap_uint8 = np.round(gainmap_norm * 255).astype(np.uint8)
 
     baseline = colour.eotf_inverse(baseline, function="sRGB")
-    baseline_uint8 = (baseline * 255).astype(np.uint8)
+    baseline_uint8 = np.round(baseline * 255).astype(np.uint8)
 
     gainmap_min_val = tuple(gainmap_min_val.tolist())
     gainmap_max_val = tuple(gainmap_max_val.tolist())

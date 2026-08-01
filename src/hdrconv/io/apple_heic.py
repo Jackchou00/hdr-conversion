@@ -29,31 +29,44 @@ from hdrconv.core import AppleHeicData
 HDR_GAIN_MAP_URN = "urn:com:apple:photo:2020:aux:hdrgainmap"
 
 
-def read_base_and_gain_map(input_path: str) -> Tuple[np.ndarray, Optional[np.ndarray]]:
-    """Read base image and HDR gain map from Apple HEIC file.
+def _heif_image_to_uint8_array(image) -> np.ndarray:
+    """Convert a pillow_heif image (main or auxiliary) to a uint8 numpy array.
 
-    Extracts the primary image and the auxiliary HDR gain map identified
-    by Apple's proprietary URN from a HEIC file.
-
-    Args:
-        input_path: Path to the input HEIC image file.
-
-    Returns:
-        Tuple of (base_image, gain_map) where:
-        - ``base_image`` (np.ndarray): Main image, uint8/uint16, shape (H, W, 3).
-        - ``gain_map`` (np.ndarray | None): Gain map if found, shape (H, W),
-            or None if no HDR gain map auxiliary image exists.
-
-    Raises:
-        Exception: If the HEIC file cannot be read.
-
-    Note:
-        The gain map is typically at 1/4 resolution of the base image
-        and uses a single grayscale channel.
-
-    See Also:
-        - https://github.com/finnschi/heic-shenanigans (reference implementation)
+    pillow_heif returns 10/12-bit HEIC data as 16-bit modes ('RGB;16',
+    'RGBA;16', 'L;16') scaled to the full 16-bit range. These are raw-decoder
+    modes that PIL's Image.frombytes rejects, so they are parsed with numpy
+    (respecting the row stride) and downshifted to 8 bits.
     """
+    mode = image.mode
+    if mode.endswith(";16"):
+        channels = {"RGB;16": 3, "RGBA;16": 4, "L;16": 1}.get(mode)
+        if channels is None:
+            raise ValueError(f"Unsupported HEIF image mode: {mode}")
+        width, height = image.size
+        arr = np.frombuffer(image.data, dtype=np.uint16).reshape(
+            height, image.stride // 2
+        )[:, : width * channels]
+        if channels > 1:
+            arr = arr.reshape(height, width, channels)
+        # 10/12-bit data is scaled to the full 16-bit range, so the top
+        # 8 bits carry the image content.
+        return (arr >> 8).astype(np.uint8)
+
+    pil_image = Image.frombytes(
+        mode,
+        image.size,
+        image.data,
+        "raw",
+        mode,
+        image.stride,
+    )
+    return np.array(pil_image)
+
+
+def _read_base_gain_map_and_icc(
+    input_path: str,
+) -> Tuple[np.ndarray, Optional[np.ndarray], Optional[bytes]]:
+    """Read the Apple HEIC base image, gain map, and embedded ICC profile."""
     try:
         heif_file = pillow_heif.read_heif(input_path, convert_hdr_to_8bit=False)
     except Exception as e:
@@ -61,15 +74,7 @@ def read_base_and_gain_map(input_path: str) -> Tuple[np.ndarray, Optional[np.nda
         raise
 
     # Base Image
-    base_image_pil = Image.frombytes(
-        heif_file.mode,
-        heif_file.size,
-        heif_file.data,
-        "raw",
-        heif_file.mode,
-        heif_file.stride,
-    )
-    base_image_np = np.array(base_image_pil)
+    base_image_np = _heif_image_to_uint8_array(heif_file)
 
     # Gain Map
     gain_map_np = None  # Default to None if not found
@@ -84,22 +89,23 @@ def read_base_and_gain_map(input_path: str) -> Tuple[np.ndarray, Optional[np.nda
                 gain_map_id = gain_map_ids[0]
                 # Use the ID to get the auxiliary image object
                 aux_image = heif_file.get_aux_image(gain_map_id)
-
-                # Create a PIL.Image object from the raw data, mode, size, and stride
-                gain_map_pil = Image.frombytes(
-                    aux_image.mode,
-                    aux_image.size,
-                    aux_image.data,
-                    "raw",
-                    aux_image.mode,
-                    aux_image.stride,
-                )
-                gain_map_np = np.array(gain_map_pil)
+                gain_map_np = _heif_image_to_uint8_array(aux_image)
             except Exception as e:
                 # Handle rare cases where the ID exists but the image data cannot be extracted
                 print(f"Warning: Unable to extract gain map with ID {gain_map_id}: {e}")
 
-    return base_image_np, gain_map_np
+    return base_image_np, gain_map_np, heif_file.info.get("icc_profile")
+
+
+def read_base_and_gain_map(input_path: str) -> Tuple[np.ndarray, Optional[np.ndarray]]:
+    """Read the base image and HDR gain map from an Apple HEIC file.
+
+    The gain map is typically one-quarter the base image resolution and is
+    single-channel. This compatibility wrapper intentionally omits color
+    metadata; ``read_apple_heic`` retains it for the conversion pipeline.
+    """
+    base, gainmap, _ = _read_base_gain_map_and_icc(input_path)
+    return base, gainmap
 
 
 def _check_exiftool_installed() -> None:
@@ -163,6 +169,10 @@ def get_headroom(file_path: str | Path, use_makernote: bool = False) -> float:
     maker48 = metadata.get("MakerNotes:HDRGain")
 
     if maker33 is None or maker48 is None:
+        # MakerNotes missing: fall back to XMP if available (mirror of the
+        # XMP-preferred path falling back to MakerNotes above).
+        if "XMP:HDRGainMapHeadroom" in metadata:
+            return float(metadata["XMP:HDRGainMapHeadroom"])
         raise ValueError(
             "Cannot extract HDR headroom: neither XMP:HDRGainMapHeadroom nor "
             "MakerNotes:HDRHeadroom/HDRGain found in file metadata."
@@ -210,10 +220,12 @@ def read_apple_heic(filepath: str) -> AppleHeicData:
         - `has_gain_map`: Check if HEIC file contains gain map.
     """
 
-    base, gainmap = read_base_and_gain_map(filepath)
+    base, gainmap, icc_profile = _read_base_gain_map_and_icc(filepath)
     headroom = get_headroom(filepath)
 
     if base is None or gainmap is None or headroom is None:
         raise ValueError(f"Failed to read Apple HEIC data from {filepath}")
 
-    return AppleHeicData(base=base, gainmap=gainmap, headroom=headroom)
+    return AppleHeicData(
+        base=base, gainmap=gainmap, headroom=headroom, icc_profile=icc_profile
+    )

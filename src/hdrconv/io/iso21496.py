@@ -30,6 +30,16 @@ import numpy as np
 import pillow_heif
 from PIL import Image
 
+from hdrconv.io._jpeg import (
+    assemble_mpf_file,
+    build_icc_segments,
+    build_mpf_minimal_payload,
+    build_segment,
+    encode_jpeg,
+    insert_segments,
+    normalize_to_uint8,
+)
+
 # -----------------------------------------------------------------------------
 # Constants & Markers
 # -----------------------------------------------------------------------------
@@ -134,8 +144,8 @@ def _extract_icc(segments: List[Tuple[int, bytes]]) -> Optional[bytes]:
 
     Note:
         Handles chunked ICC profiles with sequence numbers.
-        Validates chunk consistency but assembles available chunks
-        even if some are missing.
+        Warns and returns None when chunks are missing, rather than
+        assembling a corrupt profile.
     """
     chunks = {}
     expected_total = None
@@ -160,88 +170,16 @@ def _extract_icc(segments: List[Tuple[int, bytes]]) -> Optional[bytes]:
     if not chunks:
         return None
 
-    # Validate completeness (optional - warns but doesn't fail)
+    # Validate completeness
     if expected_total and len(chunks) != expected_total:
-        # Missing chunks - assemble what we have but it may be incomplete
-        pass
+        warnings.warn(
+            f"Incomplete ICC profile: expected {expected_total} chunks, "
+            f"got {len(chunks)}; ignoring profile."
+        )
+        return None
 
     # Assemble in order
     return b"".join(chunks[i] for i in sorted(chunks.keys()))
-
-
-def _find_mpf_gainmap_offset(segments: List[Tuple[int, bytes]], file_len: int) -> int:
-    """
-    Parses MPF APP2 to find the offset of the second image (Gainmap).
-    Returns 0 if not found.
-    """
-    for code, payload in segments:
-        if code == APP2 and payload.startswith(MPF_LABEL):
-            # Simplified MPF parser focusing on the Index IFD
-            # Header: 'MPF\0' (4) + Endian(2) + 0x002A(2) + OffsetIFD(4)
-            if len(payload) < 8:
-                continue
-
-            endian_sig = payload[4:6]
-            endian = ">" if endian_sig == b"MM" else "<"
-
-            try:
-                first_ifd_offset = struct.unpack(f"{endian}I", payload[8:12])[0]
-                # Jump to First IFD (Index IFD)
-                # MPF Structure relative to the "MM/II" start (index 4 in payload)
-                base = 4
-                ifd_pos = base + first_ifd_offset
-                num_entries = struct.unpack(
-                    f"{endian}H", payload[ifd_pos : ifd_pos + 2]
-                )[0]
-
-                # Iterate MPF tags to find MP Entry tag (0xB002)
-                entry_cursor = ifd_pos + 2
-                mp_entries_data = None
-
-                for _ in range(num_entries):
-                    tag, typ, cnt, val_off = struct.unpack(
-                        f"{endian}HHII", payload[entry_cursor : entry_cursor + 12]
-                    )
-                    if tag == 0xB002:  # MP Entry Tag
-                        # Value is offset to the MP Entry list
-                        data_off = base + val_off
-                        # Each entry is 16 bytes
-                        mp_entries_data = payload[data_off : data_off + (cnt * 16)]
-                        break
-                    entry_cursor += 12
-
-                if mp_entries_data and len(mp_entries_data) >= 32:
-                    # Look at second entry (Index 1) for the gainmap
-                    # Entry structure: Attr(4), Size(4), Offset(4), Dep1(2), Dep2(2)
-                    # Offset is relative to the MPF header start in the file.
-                    # Usually, MPF header start = current_segment_offset + 4 + 4 (marker+len+MPF_sig...)
-                    # Ideally, we calculate relative to file start if possible, but standard says relative to MPF header.
-
-                    # Entry 2 starts at byte 16
-                    e2_offset_val = struct.unpack(f"{endian}I", mp_entries_data[24:28])[
-                        0
-                    ]
-                    if e2_offset_val > 0:
-                        # We need the absolute file position.
-                        # This implementation assumes standard construction where we can't easily get the absolute
-                        # pos of the segment without tracking it.
-                        # However, for decoding, we split the bytes.
-                        # Note: This simple parser assumes the MPF logic implies encoded_iso21496 style structure.
-                        # A robust one would track `pos` in the scanner.
-                        pass
-
-            except Exception:
-                pass
-
-    # Fallback: Many MPF implementations simply concatenate.
-    # If we want to be precise, we need the segment offset.
-    # Let's rely on a simpler heuristic for this utility:
-    # The MPF offset is relative to the MPF Header (Start of 'MM'/'II').
-    # We will return the extracted relative offset if found, but caller needs context.
-
-    # RE-IMPLEMENTATION WITH OFFSET TRACKING
-    # To correctly handle MPF, we need to scan the raw bytes again or return offsets from scanner.
-    return 0
 
 
 def _split_mpf_container(data: bytes) -> Tuple[bytes, bytes]:
@@ -275,7 +213,6 @@ def _split_mpf_container(data: bytes) -> Tuple[bytes, bytes]:
             pos += 1
             continue
 
-        marker_pos = pos
         marker_byte = data[pos + 1]
         pos += 2
 
@@ -304,7 +241,9 @@ def _split_mpf_container(data: bytes) -> Tuple[bytes, bytes]:
 
         if marker_code == APP2 and payload.startswith(MPF_LABEL):
             # MPF header base is at the TIFF header ("MM"/"II"), i.e. after MPF\0.
-            mpf_offset_base = marker_pos + 8
+            # Computed from payload_start (established after the 0xFF-padding skip
+            # loop) so legal fill bytes before the marker don't shift the base.
+            mpf_offset_base = payload_start + 4
             try:
                 if len(payload) < 12:
                     break
@@ -370,7 +309,9 @@ def _split_mpf_container(data: bytes) -> Tuple[bytes, bytes]:
 def _read_rational(data: bytes, offset: int, signed: bool = False) -> float:
     fmt = ">iI" if signed else ">II"
     num, den = struct.unpack_from(fmt, data, offset)
-    return num / den if den != 0 else 0.0
+    if den == 0:
+        raise ValueError("zero denominator in ISO 21496-1 rational")
+    return num / den
 
 
 def _has_iso21496_urn(payload: bytes) -> bool:
@@ -398,6 +339,12 @@ def _expected_iso21496_binary_length(payload: bytes) -> int:
 def _iter_iso21496_binary_candidates(payload: bytes) -> Generator[bytes, None, None]:
     body, had_urn = _strip_iso21496_urn(payload)
     yield body
+
+    # A null-terminated URN match may have swallowed the first metadata byte
+    # (minimum_version high byte 0x00) of a null-less URN payload, so also
+    # yield the candidate stripped of only the null-less URN.
+    if payload.startswith(ISO21496_URN):
+        yield payload[len(ISO21496_URN_ALT) :]
 
     # HEIF/AVIF tmap payloads may include a leading one-byte version marker
     # before the standard ISO 21496-1 metadata block. JPEG APP2 payloads do not.
@@ -723,10 +670,8 @@ def _align_uint16_to_bit_depth(arr: np.ndarray, bit_depth: Optional[int]) -> np.
     if bit_depth is None or bit_depth >= 16:
         return arr
 
-    max_value = (1 << bit_depth) - 1
-    if arr.size == 0 or int(arr.max()) <= max_value:
-        return arr
-
+    # pillow_heif 1.x always returns 10/12-bit data scaled to the full 16-bit
+    # range, so the shift down to the native range must be unconditional.
     shift = 16 - bit_depth
     return (arr >> shift).astype(np.uint16, copy=False)
 
@@ -826,8 +771,10 @@ def _probe_video_item(path: str) -> tuple[int, int, str]:
         ],
         capture_output=True,
         text=True,
-        check=True,
     )
+    if result.returncode != 0:
+        detail = (result.stderr or result.stdout).strip()
+        raise RuntimeError(f"ffprobe failed for {path}\n{detail}")
     width, height, pix_fmt = result.stdout.strip().split(",")
     return int(width), int(height), pix_fmt
 
@@ -866,8 +813,10 @@ def _decode_video_item_to_array(
             "-",
         ],
         capture_output=True,
-        check=True,
     )
+    if result.returncode != 0:
+        detail = result.stderr.decode("utf-8", errors="replace").strip()
+        raise RuntimeError(f"ffmpeg decode failed for {path}\n{detail}")
 
     if pix_fmt == "gray":
         return (
@@ -1002,17 +951,7 @@ def _encode_iso21496_metadata(meta: Dict[str, Any]) -> bytes:
 
     min_ver = meta.get("minimum_version", 0)
     wri_ver = meta.get("writer_version", 0)
-    is_mc = meta.get("is_multichannel", False)
     use_base = meta.get("use_base_colour_space", False)
-
-    flags = (1 if is_mc else 0) << 7 | (1 if use_base else 0) << 6
-    out.extend(struct.pack(">HHB", min_ver, wri_ver, flags))
-
-    # Headroom
-    n, d = to_rational(meta.get("baseline_hdr_headroom", 0.0), False)
-    out.extend(struct.pack(">II", n, d))
-    n, d = to_rational(meta.get("alternate_hdr_headroom", 0.0), False)
-    out.extend(struct.pack(">II", n, d))
 
     # Channels
     gm_min = _coerce_channel_values(meta.get("gainmap_min"), "gainmap_min", (0.0,))
@@ -1024,6 +963,24 @@ def _encode_iso21496_metadata(meta: Dict[str, Any]) -> bytes:
     alt_off = _coerce_channel_values(
         meta.get("alternate_offset"), "alternate_offset", (0.0,)
     )
+
+    # Derive the channel count from the data: a field with three DISTINCT
+    # values requires 3 encoded channels, even when is_multichannel is unset.
+    # Uniform triples collapse to a single channel so a grayscale gainmap
+    # never gets a multichannel flag from broadcast metadata.
+    is_mc = meta.get("is_multichannel", False) or any(
+        len(values) == 3 and len(set(values)) > 1
+        for values in (gm_min, gm_max, gm_gam, base_off, alt_off)
+    )
+
+    flags = (1 if is_mc else 0) << 7 | (1 if use_base else 0) << 6
+    out.extend(struct.pack(">HHB", min_ver, wri_ver, flags))
+
+    # Headroom
+    n, d = to_rational(meta.get("baseline_hdr_headroom", 0.0), False)
+    out.extend(struct.pack(">II", n, d))
+    n, d = to_rational(meta.get("alternate_hdr_headroom", 0.0), False)
+    out.extend(struct.pack(">II", n, d))
 
     if is_mc:
         count = 3
@@ -1058,196 +1015,6 @@ def _encode_iso21496_metadata(meta: Dict[str, Any]) -> bytes:
         out.extend(struct.pack(">iI", n, d))
 
     return bytes(out)
-
-
-# -----------------------------------------------------------------------------
-# Encoding Helpers
-# -----------------------------------------------------------------------------
-
-
-def _create_jpeg_bytes(
-    img_arr: np.ndarray, icc: bytes | None, quality: int = 95
-) -> bytes:
-    """Encode numpy array to JPEG bytes using PIL."""
-    # Convert to uint8 if needed
-    if img_arr.dtype != np.uint8:
-        if np.issubdtype(img_arr.dtype, np.floating):
-            img_arr = np.clip(img_arr * 255, 0, 255).astype(np.uint8)
-        else:
-            img_arr = np.clip(img_arr, 0, 255).astype(np.uint8)
-
-    # Ensure PIL-compatible format (L or RGB)
-    if img_arr.ndim == 2:
-        pass
-    elif img_arr.shape[2] == 1:
-        img_arr = img_arr[:, :, 0]
-    elif img_arr.shape[2] == 4:
-        img_arr = img_arr[:, :, :3]  # Drop alpha channel
-
-    pil_img = Image.fromarray(img_arr)
-    bio = io.BytesIO()
-
-    save_kwargs = {
-        "format": "JPEG",
-        "quality": quality,
-        "subsampling": 0,  # 4:4:4 chroma subsampling for best quality
-    }
-    if icc:
-        save_kwargs["icc_profile"] = icc
-
-    pil_img.save(bio, **save_kwargs)
-    return bio.getvalue()
-
-
-def _build_app2_segment(payload: bytes) -> bytes:
-    """Build JPEG APP2 segment with given payload."""
-    # Marker (FF E2) + Length (2 bytes) + Payload
-    length = len(payload) + 2
-    return b"\xff\xe2" + length.to_bytes(2, "big") + payload
-
-
-def _build_mpf_payload(
-    primary_size: int, gainmap_size: int, gainmap_offset: int
-) -> bytes:
-    """Build MPF (Multi-Picture Format) binary payload with 2 image entries."""
-    # MPF signature
-    mpf_sig = b"MPF\x00"
-    # Big endian byte order
-    byte_order = b"MM"
-
-    # Build MP Entry List (16 bytes per entry: Attribute, Size, Offset, Dependent)
-    entries = bytearray()
-
-    # Entry 0: Primary Image (CIPA DC-007 standard attribute 0x00030000)
-    entries.extend(struct.pack(">I", 0x00030000))
-    entries.extend(struct.pack(">I", primary_size))
-    entries.extend(struct.pack(">I", 0))  # Offset 0 (self)
-    entries.extend(struct.pack(">I", 0))  # No dependent entries
-
-    # Entry 1: Gainmap Image (CIPA DC-007 standard attribute 0x00050000)
-    entries.extend(struct.pack(">I", 0x00050000))
-    entries.extend(struct.pack(">I", gainmap_size))
-    entries.extend(struct.pack(">I", gainmap_offset))
-    entries.extend(struct.pack(">I", 0))
-
-    # Build Index IFD with 3 tags: Version, NumberOfImages, MPEntry
-    num_tags = 3
-    ifd = bytearray()
-
-    # Tag 1: MPF Version (0xB000)
-    ifd.extend(struct.pack(">H", 0xB000))
-    ifd.extend(struct.pack(">H", 7))  # Type: UNDEFINED
-    ifd.extend(struct.pack(">I", 4))  # Count: 4
-    ifd.extend(b"0100")  # Value: "0100"
-
-    # Tag 2: Number of Images (0xB001)
-    ifd.extend(struct.pack(">H", 0xB001))
-    ifd.extend(struct.pack(">H", 4))  # Type: LONG
-    ifd.extend(struct.pack(">I", 1))  # Count: 1
-    ifd.extend(struct.pack(">I", 2))  # Value: 2 images
-
-    # Tag 3: MP Entry (0xB002)
-    ifd.extend(struct.pack(">H", 0xB002))
-    ifd.extend(struct.pack(">H", 7))  # Type: UNDEFINED
-    ifd.extend(struct.pack(">I", 32))  # Count: 32 bytes (2 entries * 16)
-    # Offset to data: Header(8) + Count(2) + Tags(36) + NextIFD(4) = 50 bytes
-    ifd.extend(struct.pack(">I", 50))
-
-    # Assemble all parts
-    payload = bytearray()
-    payload.extend(mpf_sig)
-    payload.extend(byte_order)
-    payload.extend(b"\x00\x2a")  # TIFF magic number
-    payload.extend(struct.pack(">I", 8))  # Offset to first IFD
-
-    # IFD block
-    payload.extend(struct.pack(">H", num_tags))
-    payload.extend(ifd)
-    payload.extend(struct.pack(">I", 0))  # No next IFD
-
-    # Data area (entries)
-    payload.extend(entries)
-
-    return bytes(payload)
-
-
-def _build_mpf_minimal_payload(num_images: int) -> bytes:
-    """Build minimal MPF payload with Version and NumberOfImages only.
-
-    Some implementations expect a minimal MPF APP2 in the gainmap stream.
-    """
-    mpf_sig = b"MPF\x00"
-    byte_order = b"MM"
-
-    num_tags = 2
-    ifd = bytearray()
-
-    # MPF Version (0xB000)
-    ifd.extend(struct.pack(">H", 0xB000))
-    ifd.extend(struct.pack(">H", 7))
-    ifd.extend(struct.pack(">I", 4))
-    ifd.extend(b"0100")
-
-    # Number of Images (0xB001)
-    ifd.extend(struct.pack(">H", 0xB001))
-    ifd.extend(struct.pack(">H", 4))
-    ifd.extend(struct.pack(">I", 1))
-    ifd.extend(struct.pack(">I", int(num_images)))
-
-    payload = bytearray()
-    payload.extend(mpf_sig)
-    payload.extend(byte_order)
-    payload.extend(b"\x00\x2a")
-    payload.extend(struct.pack(">I", 8))
-    payload.extend(struct.pack(">H", num_tags))
-    payload.extend(ifd)
-    payload.extend(struct.pack(">I", 0))
-    return bytes(payload)
-
-
-def _calculate_mpf_offsets(
-    primary_bytes_raw: bytes,
-    primary_stub_segment: bytes,
-    mpf_segment_temp: bytes,
-) -> tuple[int, int, int]:
-    """Calculate MPF-related file offsets.
-
-    MPF standard specifies offsets relative to MPF Header (the 'MM'/'II' bytes).
-    MPF Header is the first 8 bytes of MPF payload.
-
-    File structure:
-    - Primary JPEG raw data
-    - Primary stub segment (APP2)
-    - MPF segment (APP2)
-    - Gainmap JPEG data
-
-    Args:
-        primary_bytes_raw: Raw JPEG bytes of primary image
-        primary_stub_segment: Stub APP2 segment in primary
-        mpf_segment_temp: MPF APP2 segment (for length calculation)
-
-    Returns:
-        tuple: (mpf_base_file_offset, gainmap_relative_offset, total_primary_len)
-            - mpf_base_file_offset: MPF Header offset from file start
-            - gainmap_relative_offset: Gainmap offset relative to MPF Header
-            - total_primary_len: Total length of primary section
-    """
-    # Total length of primary section (including stub and MPF segments)
-    total_primary_len = (
-        len(primary_bytes_raw) + len(primary_stub_segment) + len(mpf_segment_temp)
-    )
-
-    # MPF marker offset (SOI marker 2 bytes + primary_stub_segment)
-    mpf_marker_offset = 2 + len(primary_stub_segment)
-
-    # MPF Header offset from file start
-    # MPF marker (2 bytes) + segment length (2 bytes) + "MPF\0" (4 bytes) = 8 bytes
-    mpf_base_file_offset = mpf_marker_offset + 8
-
-    # Gainmap offset relative to MPF Header
-    gainmap_relative_offset = total_primary_len - mpf_base_file_offset
-
-    return mpf_base_file_offset, gainmap_relative_offset, total_primary_len
 
 
 # -----------------------------------------------------------------------------
@@ -1340,6 +1107,7 @@ def _read_21496_isobmff(filepath: str) -> GainmapImage:
     _check_ffmpeg_installed()
 
     last_error: Exception | None = None
+    candidate_errors: list[str] = []
     with tempfile.TemporaryDirectory(prefix="hdrconv_21496_") as temp_dir:
         structure = _parse_isobmff_structure(filepath, temp_dir)
         tmap_items = _select_isobmff_tmap_items(structure)
@@ -1358,11 +1126,22 @@ def _read_21496_isobmff(filepath: str) -> GainmapImage:
                 )
 
                 if baseline_id == structure["primary_id"]:
-                    (
-                        baseline,
-                        baseline_icc,
-                        baseline_bit_depth,
-                    ) = _read_isobmff_primary_image(filepath, baseline_bit_depth)
+                    try:
+                        (
+                            baseline,
+                            baseline_icc,
+                            baseline_bit_depth,
+                        ) = _read_isobmff_primary_image(filepath, baseline_bit_depth)
+                    except Exception:
+                        # pillow_heif may lack the codec (e.g. AV1); fall back
+                        # to the ffmpeg item decode path.
+                        baseline_bit_depth = _require_isobmff_item_bit_depth(
+                            structure, baseline_id, "baseline"
+                        )
+                        baseline = _read_isobmff_item_image(
+                            filepath, baseline_id, structure, temp_dir
+                        )
+                        baseline_icc = None
                 else:
                     baseline_bit_depth = _require_isobmff_item_bit_depth(
                         structure, baseline_id, "baseline"
@@ -1372,9 +1151,13 @@ def _read_21496_isobmff(filepath: str) -> GainmapImage:
                     )
                     baseline_icc = None
 
-                gainmap = _try_read_isobmff_aux_image(
-                    filepath, gainmap_id, gainmap_bit_depth
-                )
+                try:
+                    gainmap = _try_read_isobmff_aux_image(
+                        filepath, gainmap_id, gainmap_bit_depth
+                    )
+                except Exception:
+                    # Same pillow_heif codec limitation as the baseline path.
+                    gainmap = None
                 if gainmap is None:
                     gainmap = _read_isobmff_item_image(
                         filepath, gainmap_id, structure, temp_dir
@@ -1391,9 +1174,11 @@ def _read_21496_isobmff(filepath: str) -> GainmapImage:
                 )
             except (RuntimeError, ValueError, struct.error) as e:
                 last_error = e
+                candidate_errors.append(f"tmap item {tmap_id}: {e}")
 
-    raise ValueError(
-        f"No parseable ISO 21496-1 tmap metadata found in HEIF/AVIF container: {filepath}"
+    raise RuntimeError(
+        "Failed to read ISO 21496-1 gainmap from HEIF/AVIF container: "
+        f"{filepath}. Candidate errors: {'; '.join(candidate_errors)}"
     ) from last_error
 
 
@@ -1465,72 +1250,35 @@ def write_21496(
         - `hdr_to_gainmap`: Convert HDR image to GainmapImage.
     """
     try:
-        # Step 1: Encode gainmap image
-        gainmap_bytes_raw = _create_jpeg_bytes(
-            data["gainmap"], data.get("gainmap_icc"), gainmap_quality
+        # Gainmap stream: minimal MPF, ISO 21496-1 metadata, then ICC chunks.
+        # Integer inputs deeper than 8 bits (e.g. from the ISOBMFF/screenshot
+        # readers) are rescaled to uint8 using the recorded bit depth.
+        gainmap_stream = insert_segments(
+            encode_jpeg(
+                normalize_to_uint8(data["gainmap"], data.get("gainmap_bit_depth")),
+                gainmap_quality,
+            ),
+            [
+                build_segment(APP2, build_mpf_minimal_payload(2)),
+                build_segment(APP2, _encode_iso21496_metadata(data["metadata"])),
+                *build_icc_segments(data.get("gainmap_icc")),
+            ],
         )
 
-        # Step 1.1: Insert minimal MPF APP2 in gainmap stream for compatibility
-        gainmap_mpf_segment = _build_app2_segment(_build_mpf_minimal_payload(2))
-
-        # Step 2: Build ISO 21496-1 metadata segment (APP2)
-        iso_payload = _encode_iso21496_metadata(data["metadata"])
-        iso_segment = _build_app2_segment(iso_payload)
-
-        # Insert ISO segment after SOI (0xFFD8) in gainmap
-        gainmap_final = (
-            gainmap_bytes_raw[:2]
-            + gainmap_mpf_segment
-            + iso_segment
-            + gainmap_bytes_raw[2:]
+        # Primary stream: URN stub, MPF index pointing at the gainmap, ICC.
+        urn_stub = build_segment(APP2, ISO21496_URN + b"\x00\x00\x00\x00")
+        file_bytes = assemble_mpf_file(
+            primary_jpeg=encode_jpeg(
+                normalize_to_uint8(data["baseline"], data.get("baseline_bit_depth")),
+                baseline_quality,
+            ),
+            gainmap_stream=gainmap_stream,
+            segments_before_mpf=[urn_stub],
+            segments_after_mpf=build_icc_segments(data.get("baseline_icc")),
         )
 
-        # Step 3: Encode baseline image
-        primary_bytes_raw = _create_jpeg_bytes(
-            data["baseline"], data.get("baseline_icc"), baseline_quality
-        )
-
-        # Step 3.1: Insert URN stub APP2 in primary stream for compatibility
-        primary_stub_segment = _build_app2_segment(ISO21496_URN + b"\x00\x00\x00\x00")
-
-        # Step 4: Build MPF index segment (APP2)
-        # MPF points to gainmap at end of file
-
-        # Step 4.1: Generate MPF payload with placeholder offset for length calculation
-        mpf_payload_temp = _build_mpf_payload(
-            primary_size=len(primary_bytes_raw),
-            gainmap_size=len(gainmap_final),
-            gainmap_offset=0,  # Placeholder
-        )
-        mpf_segment_temp = _build_app2_segment(mpf_payload_temp)
-
-        # Step 4.2: Calculate MPF-related file offsets
-        _, gainmap_relative_offset, total_primary_len = _calculate_mpf_offsets(
-            primary_bytes_raw,
-            primary_stub_segment,
-            mpf_segment_temp,
-        )
-
-        # Step 4.3: Regenerate MPF with correct primary size and gainmap offset
-        mpf_payload_final = _build_mpf_payload(
-            primary_size=total_primary_len,
-            gainmap_size=len(gainmap_final),
-            gainmap_offset=gainmap_relative_offset,
-        )
-        mpf_segment_final = _build_app2_segment(mpf_payload_final)
-
-        # Step 5: Assemble baseline stream with MPF
-        primary_final = (
-            primary_bytes_raw[:2]
-            + primary_stub_segment
-            + mpf_segment_final
-            + primary_bytes_raw[2:]
-        )
-
-        # Step 6: Write file (baseline + gainmap)
         with open(filepath, "wb") as f:
-            f.write(primary_final)
-            f.write(gainmap_final)
+            f.write(file_bytes)
 
     except Exception as e:
         raise RuntimeError(f"Failed to write ISO 21496-1 file: {filepath}") from e

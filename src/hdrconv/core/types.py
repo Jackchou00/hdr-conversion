@@ -22,8 +22,10 @@ class GainmapMetadata(TypedDict, total=False):
     Attributes:
         minimum_version: Minimum decoder version required. Should be 0.
         writer_version: Version of the encoder that created the metadata.
-        baseline_hdr_headroom: HDR headroom of baseline image, typically 1.0.
-        alternate_hdr_headroom: HDR headroom of alternate image (e.g., 4.5).
+        baseline_hdr_headroom: HDR headroom of baseline image in log2 stops,
+            typically 0.0 for an SDR baseline.
+        alternate_hdr_headroom: HDR headroom of alternate image in log2 stops
+            (e.g., log2(4.5) ~= 2.17 for a 4.5x linear headroom).
         is_multichannel: True if gainmap has separate RGB channels, False for single channel.
         use_base_colour_space: True to compute in baseline color space, False for alternate.
         gainmap_min: Minimum gainmap values, tuple of 1 or 3 floats.
@@ -123,6 +125,7 @@ class AppleHeicData(TypedDict):
         gainmap: numpy array, uint8, shape (H, W, 1), range [0, 255].
         headroom: Peak luminance headroom value, typically 2.0-8.0.
             Represents the maximum brightness multiplier for HDR highlights.
+        icc_profile: Optional ICC profile bytes for the base image color space.
 
     See Also:
         - `read_apple_heic`: Read AppleHeicData from HEIC file.
@@ -132,3 +135,4 @@ class AppleHeicData(TypedDict):
     base: np.ndarray
     gainmap: np.ndarray
     headroom: float
+    icc_profile: NotRequired[Optional[bytes]]

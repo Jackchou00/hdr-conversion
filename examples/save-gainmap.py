@@ -5,9 +5,8 @@ Example: save ISO 21496-1 baseline and gainmap
 import argparse
 
 import hdrconv.io as io
-from imagecodecs import jpeg_encode
+from hdrconv.io import build_icc_segments, encode_jpeg, insert_segments
 import numpy as np
-from PIL import Image
 
 
 def main():
@@ -34,11 +33,14 @@ def main():
     # save jpeg
     print("Saving baseline and gainmap as JPEG...")
 
-    gainmap_jpeg = jpeg_encode(np.round(gainmap * 255).astype(np.uint8), level=95)
+    baseline_jpeg = insert_segments(
+        encode_jpeg(np.round(baseline * 255).astype(np.uint8)),
+        build_icc_segments(gainmap_data["baseline_icc"]),
+    )
+    gainmap_jpeg = encode_jpeg(np.round(gainmap * 255).astype(np.uint8))
 
-    baseline_image = Image.fromarray(np.round(baseline * 255).astype(np.uint8))
-    baseline_image.save("baseline.jpg", icc_profile=gainmap_data["baseline_icc"])
-
+    with open("baseline.jpg", "wb") as f:
+        f.write(baseline_jpeg)
     with open("gainmap.jpg", "wb") as f:
         f.write(gainmap_jpeg)
 

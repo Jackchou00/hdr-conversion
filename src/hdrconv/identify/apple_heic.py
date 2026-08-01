@@ -37,7 +37,8 @@ def has_gain_map(input_path: str) -> bool:
         - `read_apple_heic`: Extract gain map data from HEIC file.
     """
     detected = False
-    heif_file = pillow_heif.read_heif(input_path, convert_hdr_to_8bit=False)
+    # open_heif reads metadata lazily without decoding pixel data.
+    heif_file = pillow_heif.open_heif(input_path, convert_hdr_to_8bit=False)
 
     if "aux" in heif_file.info:
         aux_info = heif_file.info["aux"]
