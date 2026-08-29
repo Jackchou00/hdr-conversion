@@ -98,7 +98,9 @@ def test_heif_8bit_mode_matches_pil_path():
     padded = rng.integers(0, 256, size=(height, width * 3 + pad), dtype=np.uint8)
     image = _FakeHeifImage("RGB", (width, height), padded.tobytes(), width * 3 + pad)
     expected = np.array(
-        Image.frombytes("RGB", (width, height), padded.tobytes(), "raw", "RGB", width * 3 + pad)
+        Image.frombytes(
+            "RGB", (width, height), padded.tobytes(), "raw", "RGB", width * 3 + pad
+        )
     )
     np.testing.assert_array_equal(_heif_image_to_uint8_array(image), expected)
 

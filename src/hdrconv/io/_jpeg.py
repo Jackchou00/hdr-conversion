@@ -119,11 +119,7 @@ def _header_insert_pos(jpeg: bytes) -> int:
         raise ValueError("Not a JPEG stream (missing SOI marker)")
 
     pos = 2
-    while (
-        pos + 4 <= len(jpeg)
-        and jpeg[pos] == 0xFF
-        and jpeg[pos + 1] in (0xE0, 0xE1)
-    ):
+    while pos + 4 <= len(jpeg) and jpeg[pos] == 0xFF and jpeg[pos + 1] in (0xE0, 0xE1):
         pos += 2 + int.from_bytes(jpeg[pos + 2 : pos + 4], "big")
     return pos
 
@@ -210,9 +206,7 @@ def assemble_mpf_file(
     after = b"".join(segments_after_mpf)
 
     mpf_segment_len = len(build_segment(APP2, build_mpf_payload(0, 0, 0)))
-    total_primary_len = (
-        len(primary_jpeg) + len(before) + mpf_segment_len + len(after)
-    )
+    total_primary_len = len(primary_jpeg) + len(before) + mpf_segment_len + len(after)
     # MPF TIFF header sits after marker (2) + length (2) + "MPF\0" (4).
     mpf_header_offset = pos + len(before) + 8
 

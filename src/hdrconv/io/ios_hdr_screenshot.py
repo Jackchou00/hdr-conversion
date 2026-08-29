@@ -93,7 +93,17 @@ def _split_ids_into_groups(ids: list[int]) -> list[list[int]]:
 def _decode_tile_to_png16(raw_path: str, png_path: str) -> None:
     """Decode a raw HEVC tile to a lossless 16-bit RGB PNG with ffmpeg."""
     subprocess.run(
-        ["ffmpeg", "-y", "-i", raw_path, "-c:v", "png", "-pix_fmt", "rgb48be", png_path],
+        [
+            "ffmpeg",
+            "-y",
+            "-i",
+            raw_path,
+            "-c:v",
+            "png",
+            "-pix_fmt",
+            "rgb48be",
+            png_path,
+        ],
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
     )

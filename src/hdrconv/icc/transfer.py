@@ -156,6 +156,4 @@ def linearize_array_with_icc(
             return _linearize_array_with_icc_curv(trc, img_array)
         else:
             errors.append(f"{sig}: unsupported TRC type '{trc.get('type')}'")
-    raise ValueError(
-        "no usable TRC tag in ICC profile ({})".format("; ".join(errors))
-    )
+    raise ValueError("no usable TRC tag in ICC profile ({})".format("; ".join(errors)))

@@ -21,9 +21,7 @@ import numpy as np
 
 
 try:
-    _AVIF_ENCODE_SUPPORTS_MATRIX = (
-        "matrix" in inspect.signature(avif_encode).parameters
-    )
+    _AVIF_ENCODE_SUPPORTS_MATRIX = "matrix" in inspect.signature(avif_encode).parameters
 except (TypeError, ValueError):  # pragma: no cover - signature not introspectable
     _AVIF_ENCODE_SUPPORTS_MATRIX = False
 
