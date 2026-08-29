@@ -1,6 +1,6 @@
 [project]
 name = "hdr-conversion"
-version = "0.1.5"
+version = "0.1.6"
 description = "tools for converting HDR images between different formats"
 readme = "README.md"
 license = "MIT"
